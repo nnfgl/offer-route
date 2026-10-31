@@ -1,0 +1,19 @@
+.module-entry{margin-top:16px}
+.interview-panel{margin-top:32px;padding:28px;border:1px solid #dfe5d7;border-radius:12px;background:#fff;overflow-wrap:anywhere}
+.interview-panel>.section-heading{flex-wrap:wrap}
+.interview-panel p,.interview-panel li{font-size:14px;line-height:1.9}
+.interview-panel textarea{font:inherit;min-width:0;width:100%;resize:vertical;border:1px solid #dce1d6;border-radius:7px;padding:12px 13px;background:#fff;color:#21392d}
+.interview-panel textarea:focus{outline:2px solid #7c9862;outline-offset:1px}
+.interview-panel form{margin:24px 0}
+.interview-panel .primary-button{align-self:flex-start}
+.interview-history{list-style:none;padding:0;display:grid;gap:12px}
+.interview-history button{max-width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.interview-turns{padding-left:24px}
+.interview-turns li{padding:8px 0 20px}
+.interview-turns h3{margin:4px 0;font-size:16px}
+.interview-answer,.interview-experience{background:#f4f7ee;padding:16px;border-radius:8px;white-space:pre-wrap}
+.interview-feedback{padding:16px 0;border-bottom:1px solid #e1e5da}
+.interview-feedback h4{margin:0}
+.interview-panel .error-message{margin:16px 0}
+.interview-panel .error-message button{margin-left:12px}
+@media(max-width:560px){.interview-panel{padding:18px}.interview-panel .section-heading h2{font-size:19px}.interview-panel .primary-button{width:100%}}

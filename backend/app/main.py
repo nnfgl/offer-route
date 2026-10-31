@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.interview.router import router as interview_router
 from app.core.config import Settings
 from app.core.database import Database
 from app.core.errors import install_error_handlers
@@ -46,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.include_router(router, prefix="/api/v1")
+    app.include_router(interview_router, prefix="/api/v1")
 
     @app.get("/api/v1/health", tags=["system"])
     def health():
@@ -59,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {"id": "job", "title": "岗位分析", "status": "planned"},
                 {"id": "diagnosis", "title": "能力诊断", "status": "planned"},
                 {"id": "training", "title": "实战训练", "status": "planned"},
-                {"id": "interview", "title": "模拟面试", "status": "planned"},
+                {"id": "interview", "title": "模拟面试", "status": "available"},
             ],
         }
 

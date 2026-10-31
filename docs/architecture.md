@@ -6,14 +6,16 @@ flowchart TD
     API --> Auth[账号 / Cookie 会话]
     API --> Workspace[工作台]
     Auth --> DB[(SQLite)]
+    API --> Interview[模拟面试 / 规则复盘]
+    Interview --> DB
     API -. 下一阶段 .-> Flow[流程调度器]
     Flow -.-> Job[岗位分析 Agent]
     Flow -.-> Diagnosis[能力诊断 Agent]
     Flow -.-> Training[实战训练 Agent]
-    Flow -.-> Interview[模拟面试 Agent]
+    Flow -.-> Interview
 ```
 
-实线表示已实现；虚线表示规划，尚无模型调用或业务执行。
+实线表示已实现；虚线表示规划。模拟面试可独立执行三轮文字问答和规则复盘，尚无模型调用。
 
 ## 公共基础
 
@@ -27,6 +29,11 @@ flowchart TD
 - 生产配置强制 Secure Cookie 和 HTTPS 来源。当前不信任 X-Forwarded-For。
 
 ## 后续扩展
+
+模拟面试通过追加迁移 2 保存归属用户的会话、问题、回答和复盘；不修改迁移 1。
+写操作复用 Origin 和 CSRF 校验，读写查询均包含登录用户 ID。
+复盘复用 `AgentRequest` / `AgentResult`，待训练项保存在 `report.data.training_items`。
+共享能力档案和调度器尚未完成，因此当前不回写公共档案。联调约定见 `interview.md`。
 
 每个 Agent 拥有独立任务说明、工具权限和结构化输出，共享用户能力档案与证据引用。
 调度器负责调用顺序、状态持久化、超时、预算、有限重试，先采用明确工作流。

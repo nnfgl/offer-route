@@ -39,4 +39,23 @@
 常用状态：401 未登录/凭据错误、403 来源或 CSRF 错误、409 邮箱不可用、
 422 输入错误、429 请求频繁（带 Retry-After）。验证错误不回显密码。
 
-四个 Agent 当前只有内部协议，尚无可调用的业务 API。实现时需补充协议与鉴权测试。
+岗位、诊断和训练当前只有内部协议。模拟面试已开放以下 API，均需要登录。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | /interviews | 创建三轮面试（201） |
+| GET | /interviews | 当前用户最近 50 条记录，按创建时间降序 |
+| GET | /interviews/{id} | 恢复自己的面试及复盘 |
+| POST | /interviews/{id}/answers | 提交当前轮回答，第三轮生成复盘 |
+
+创建请求：`{"role":"Python 后端工程师","experience":"开发校园图书借阅系统，负责后端接口。"}`。
+岗位去除首尾空格后 1–100 字，经历 10–5000 字。
+回答请求：`{"round":1,"answer":"我负责……"}`，轮次 1–3，回答去除首尾空格后 1–5000 字。
+两个写接口均要求允许的 Origin 和 `X-CSRF-Token`，请求不接受 `user_id` 等额外字段。
+
+会话返回 `id/role/experience/status/created_at/turns/report`，其中 `created_at` 为 Unix 秒。
+`turns` 保存已回答题和当前题（`question/answer`，未回答为 null）；
+第三轮提交后 `status` 变为 `completed`，`report` 返回公共 `AgentResult`。
+409 表示重复、过期或已结束的轮次；重新 GET 记录恢复进度。
+不存在和不属于当前用户的 ID 都返回 404。
+复盘与待训练项协议见 [模拟面试文档](interview.md)。

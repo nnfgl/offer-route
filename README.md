@@ -5,7 +5,8 @@
 ## 当前阶段
 
 已实现公共架构与账号模块：注册、登录、当前用户、会话恢复、退出登录、受保护工作台。
-岗位分析、能力诊断、实战训练、模拟面试尚未实现，界面明确标记为建设中。
+模拟面试已支持独立的三轮文字问答、历史恢复和有原文依据的规则复盘。
+岗位分析、能力诊断、实战训练尚未实现，界面明确标记为建设中。
 本阶段不需要 DeepSeek API Key。
 
 ## 技术与目录
@@ -19,13 +20,13 @@ backend/app/
     job/                岗位分析（待开发）
     diagnosis/          能力诊断（待开发）
     training/           实战训练（待开发）
-    interview/          模拟面试（待开发）
+    interview/          文字面试与规则复盘
     orchestration/      流程调度（待开发）
-backend/tests/          账号与安全边界测试
+backend/tests/          账号、面试与安全边界测试
 frontend/src/
   features/auth/        账户页面
   features/workspace/   受保护工作台
-  features/agents/      四个业务页面（待开发）
+  features/agents/      模拟面试页面；其他业务待开发
   lib/                  统一请求与类型
 docs/                   架构、API、四人分工和协作规范
 .github/                CI、Issue 和 PR 模板
@@ -78,6 +79,7 @@ GitHub push/PR 自动运行后端测试、前端构建与浏览器测试。
 - [架构与安全边界](docs/architecture.md)
 - [接口约定](docs/api.md)
 - [四人分工与业务任务](docs/team-plan.md)
+- [模拟面试使用与联调](docs/interview.md)
 - [协作流程](CONTRIBUTING.md)
 
 生产上线需 HTTPS、显式来源配置、持久数据库、备份，以及按部署规模提供共享限流。
