@@ -3,12 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.orchestration.service import JobWorkflow
 from app.core.config import Settings
 from app.core.database import Database
 from app.core.errors import install_error_handlers
+from app.core.model_client import DeepSeekClient
 from app.modules.auth.router import current_user, router
 from app.modules.auth.schemas import UserOutput
 from app.modules.auth.security import RateLimiter
+from app.modules.jobs.router import router as jobs_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -18,11 +21,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         database.migrate()
+        app.state.job_workflow.recover_interrupted()
         yield
 
     app = FastAPI(title="Offer Route API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.database = database
+    app.state.job_workflow = JobWorkflow(database, settings, DeepSeekClient(settings))
+    app.state.job_rate_limiter = RateLimiter(6, 60)
     app.state.rate_limiter = RateLimiter(
         settings.auth_rate_limit, settings.auth_rate_window_seconds
     )
@@ -46,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.include_router(router, prefix="/api/v1")
+    app.include_router(jobs_router, prefix="/api/v1")
 
     @app.get("/api/v1/health", tags=["system"])
     def health():
@@ -56,7 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "user": user,
             "modules": [
-                {"id": "job", "title": "岗位分析", "status": "planned"},
+                {"id": "job", "title": "岗位分析", "status": "available"},
                 {"id": "diagnosis", "title": "能力诊断", "status": "planned"},
                 {"id": "training", "title": "实战训练", "status": "planned"},
                 {"id": "interview", "title": "模拟面试", "status": "planned"},

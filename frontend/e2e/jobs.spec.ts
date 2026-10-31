@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test';
+
+test('岗位分析、原文定位、刷新后从历史恢复', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '注册', exact: true }).click();
+  await page.getByLabel('称呼', { exact: true }).fill('岗位分析同学');
+  await page.getByLabel('邮箱地址').fill(`job-${info.project.name}-${Date.now()}@example.com`);
+  await page.getByLabel('密码', { exact: true }).fill('job-test-long-password');
+  await page.getByLabel('确认密码').fill('job-test-long-password');
+  await page.getByRole('button', { name: '创建账户并进入' }).click();
+  await page.getByRole('button', { name: '开始岗位分析 ↗' }).click();
+  await expect(page.getByText('本地规则提取', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '填入示例' }).click();
+  await page.getByRole('button', { name: '分析岗位要求' }).click();
+  await expect(page.getByRole('heading', { name: 'Python 后端开发', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '必需条件4' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '优先与加分2' })).toBeVisible();
+  await page.getByRole('button', { name: /查看原文/ }).first().click();
+  await expect(page.locator('mark')).toContainText('Python');
+  await expect(page.getByText('后续功能尚未开放，本次未执行')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.reload();
+  await page.getByRole('button', { name: '开始岗位分析 ↗' }).click();
+  await page.getByRole('button', { name: /Python 后端开发.*已完成/ }).click();
+  await expect(page.getByRole('heading', { name: 'Python 后端开发', exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: '招聘要求', exact: true }).fill('欢迎加入我们的团队，一起创造美好的未来，携手共进。');
+  await page.getByRole('button', { name: '分析岗位要求' }).click();
+  await expect(page.getByText('需补充材料', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '返回工作台' }).click();
+  await expect(page.getByRole('heading', { name: '你好，岗位分析同学。' })).toBeVisible();
+});
