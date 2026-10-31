@@ -1,10 +1,10 @@
-import json
 import time
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.agents.contracts import AgentRequest
+from app.agents.interview import shared_store
 from app.agents.interview.schemas import AnswerInput, InterviewInput, InterviewOutput
 from app.agents.interview.service import first_question, follow_up, review
 from app.modules.auth.router import current_user, require_csrf
@@ -14,24 +14,21 @@ router = APIRouter(prefix="/interviews", tags=["interview"])
 
 
 def find(connection, interview_id: str, user_id: str) -> dict:
-    row = connection.execute(
-        "SELECT payload FROM interviews WHERE id = ? AND user_id = ?",
-        (interview_id, user_id),
-    ).fetchone()
-    if not row:
-        raise HTTPException(404, {"code": "interview_not_found", "message": "面试记录不存在"})
-    return json.loads(row["payload"])
+    return shared_store.find(connection, "text", interview_id, user_id).model_dump()
 
 
 @router.get("", response_model=list[InterviewOutput])
 def list_interviews(request: Request, user: UserOutput = Depends(current_user)):
     with request.app.state.database.connect() as connection:
-        rows = connection.execute(
-            "SELECT payload FROM interviews WHERE user_id = ? ORDER BY created_at DESC, id DESC "
-            "LIMIT 50",
-            (user.id,),
-        ).fetchall()
-    return [json.loads(row["payload"]) for row in rows]
+        return shared_store.history(connection, "text", user.id)
+
+
+@router.get("/contexts")
+def contexts(
+    request: Request, job_analysis_id: str | None = None, user: UserOutput = Depends(current_user)
+):
+    with request.app.state.database.connect() as connection:
+        return shared_store.choices(connection, user.id, job_analysis_id)
 
 
 @router.post(
@@ -40,19 +37,24 @@ def list_interviews(request: Request, user: UserOutput = Depends(current_user)):
 def create_interview(
     data: InterviewInput, request: Request, user: UserOutput = Depends(current_user)
 ):
-    interview = InterviewOutput(
-        id=str(uuid4()),
-        role=data.role,
-        experience=data.experience,
-        status="active",
-        created_at=int(time.time()),
-        turns=[{"question": first_question(data.role, data.experience)}],
-    )
     with request.app.state.database.connect() as connection:
-        connection.execute(
-            "INSERT INTO interviews(id, user_id, created_at, payload) VALUES (?, ?, ?, ?)",
-            (interview.id, user.id, interview.created_at, interview.model_dump_json()),
+        connection.execute("BEGIN IMMEDIATE")
+        context = shared_store.parent_context(
+            connection, user.id, data.job_analysis_id, data.diagnosis_id
         )
+        role = context.job_title if context else data.role
+        interview = InterviewOutput(
+            id=str(uuid4()),
+            role=role,
+            experience=data.experience,
+            status="active",
+            created_at=int(time.time()),
+            job_analysis_id=data.job_analysis_id,
+            diagnosis_id=data.diagnosis_id,
+            parent_context=context,
+            turns=[{"question": first_question(role, data.experience)}],
+        )
+        shared_store.save(connection, "text", interview, user.id, create=True)
     return interview
 
 
@@ -92,8 +94,5 @@ def answer_interview(
                     context={"turns": interview["turns"]},
                 )
             ).model_dump()
-        connection.execute(
-            "UPDATE interviews SET payload = ? WHERE id = ? AND user_id = ?",
-            (json.dumps(interview, ensure_ascii=False), interview_id, user.id),
-        )
+        shared_store.save(connection, "text", InterviewOutput.model_validate(interview), user.id)
     return interview

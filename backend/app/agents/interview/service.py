@@ -88,6 +88,7 @@ def review(request: AgentRequest) -> AgentResult:
         summary="三轮文字面试已完成；请结合回答原文复盘表达并补充证据。",
         evidence=evidence,
         data={
+            "schema_version": 1,
             "evaluation_mode": "rules-v1",
             "score": sum(d["score"] for d in dimensions),
             "max_score": 4,

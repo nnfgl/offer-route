@@ -11,6 +11,7 @@ from app.agents.contracts import AgentKind, AgentResult
 from app.agents.interview import voice_provider
 from app.agents.interview.voice_schemas import VoiceInterview, VoiceMessage
 from app.core.config import Settings
+from app.core.model_client import ModelFailure
 from app.main import create_app
 
 BASE = "/api/v1/voice-interviews"
@@ -35,6 +36,7 @@ def client(tmp_path, monkeypatch):
         database_path=tmp_path / "voice.db",
         auth_rate_limit=100,
         voice_api_key="test-secret-do-not-expose",
+        DEEPSEEK_API_KEY="test-deepseek-secret",
         voice_webrtc_url="https://workspace.cn-beijing.maas.aliyuncs.com/api/v1/webrtc/realtime",
     )
     monkeypatch.setattr(voice_provider, "exchange_sdp", AsyncMock(return_value=SDP))
@@ -289,7 +291,10 @@ def test_model_report_accepts_only_verifiable_evidence(monkeypatch, invalid):
         dimensions[0]["evidence"] = []
     body = {
         "choices": [
-            {"message": {"content": json.dumps({"summary": "复盘", "dimensions": dimensions})}}
+            {
+                "finish_reason": "stop",
+                "message": {"content": json.dumps({"summary": "复盘", "dimensions": dimensions})},
+            }
         ]
     }
     original = httpx.AsyncClient
@@ -297,18 +302,29 @@ def test_model_report_accepts_only_verifiable_evidence(monkeypatch, invalid):
         voice_provider.httpx,
         "AsyncClient",
         lambda **kwargs: original(
-            transport=httpx.MockTransport(lambda request: httpx.Response(200, json=body)), **kwargs
+            **{
+                **kwargs,
+                "transport": httpx.MockTransport(lambda request: httpx.Response(200, json=body)),
+            }
         ),
     )
     if invalid == "valid":
-        result = asyncio.run(voice_provider.generate_review(Settings(), interview))
+        result = asyncio.run(
+            voice_provider.generate_review(
+                Settings(_env_file=None, DEEPSEEK_API_KEY="test"), interview
+            )
+        )
         assert result.task_id == interview.id and result.agent == AgentKind.INTERVIEW
         assert result.data["score"] == 8 and result.data["max_score"] == 20
         assert len(result.evidence) == 4 and len(result.data["training_items"]) == 4
         assert result.evidence[0].source == "voice:voice-test:message:answer-1"
     else:
-        with pytest.raises(ValueError):
-            asyncio.run(voice_provider.generate_review(Settings(), interview))
+        with pytest.raises(ModelFailure):
+            asyncio.run(
+                voice_provider.generate_review(
+                    Settings(_env_file=None, DEEPSEEK_API_KEY="test"), interview
+                )
+            )
 
 
 def test_voice_transcript_and_report_survive_restart(client):

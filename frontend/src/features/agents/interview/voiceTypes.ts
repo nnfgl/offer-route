@@ -19,5 +19,5 @@ export type VoiceInterview = {
   report_status: 'not_started' | 'processing' | 'completed' | 'failed';
   report_started_at: number | null; report_error: string | null; report: VoiceReport | null;
 };
-export type VoiceConfig = { configured: boolean; max_minutes: number; provider: string };
+export type VoiceConfig = { configured: boolean; review_configured: boolean; max_minutes: number; provider: string };
 export type VoiceConnect = { answer_sdp: string; session: Record<string, unknown> };

@@ -9,8 +9,9 @@
 新增实时语音面试：WebRTC 双向语音、流式转写、插话打断，以及结束后的异步模型复盘。
 语音链路已接入百炼协议并通过模拟服务测试；真实麦克风与云服务验收需配置密钥后进行。
 岗位分析、能力诊断、实战训练尚未实现，界面明确标记为建设中。
-本阶段不需要 DeepSeek API Key。
-文字练习无需密钥；语音面试需要百炼 API Key、对应业务空间地址及模型权限，见[语音配置](docs/voice-interview.md)。
+独立文字练习无需密钥；实时语音需要百炼 Key 和业务空间地址，面试后模型复盘使用团队公共
+`DEEPSEEK_API_KEY`，见[语音配置](docs/voice-interview.md)。
+已对接共用数据库设计，岗位和诊断关联会在 A 的正式迁移建表后启用，旧练习记录仍可读取。
 
 ## 技术与目录
 
@@ -84,6 +85,8 @@ GitHub push/PR 自动运行后端测试、前端构建与浏览器测试。
 - [四人分工与业务任务](docs/team-plan.md)
 - [模拟面试使用与联调](docs/interview.md)
 - [实时语音配置、接口与验收](docs/voice-interview.md)
+- [四人共用数据库约定](docs/database.md)
+- [面试模块与最新团队文件的适配](docs/interview-integration.md)
 - [协作流程](CONTRIBUTING.md)
 
 生产上线需 HTTPS、显式来源配置、持久数据库、备份，以及按部署规模提供共享限流。

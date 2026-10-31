@@ -5,6 +5,8 @@ import type { Session } from '../../../lib/api';
 import { VoiceConnection } from './voiceConnection';
 import type { VoiceConfig, VoiceConnect, VoiceInterview, VoiceMessage } from './voiceTypes';
 import './interview.css';
+import { InterviewContextFields } from './InterviewContextFields';
+import type { InterviewLinks } from './InterviewContextFields';
 
 export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
   session: Session; onExpired: () => void; onRunningChange: (running: boolean) => void;
@@ -22,6 +24,7 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
   const [error, setError] = useState('');
   const [needsIncomplete, setNeedsIncomplete] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [links, setLinks] = useState<InterviewLinks>({ job_analysis_id: null, diagnosis_id: null });
   const connection = useRef<VoiceConnection | null>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const alive = useRef(true);
@@ -108,7 +111,7 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
     event.preventDefault(); setBusy(true); setError(''); setNeedsIncomplete(false);
     try {
       const record = await api<VoiceInterview>('/voice-interviews', {
-        method: 'POST', headers, body: JSON.stringify({ role, experience }),
+        method: 'POST', headers, body: JSON.stringify({ role, experience, ...links }),
       });
       remember(record); await connect(record);
     } catch (cause) { stopMedia(); fail(cause); } finally { if (alive.current) setBusy(false); }
@@ -126,16 +129,23 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
       await saveQueue.current.catch(() => undefined);
       let record = await api<VoiceInterview>(`/voice-interviews/${current.id}`);
       if (record.status !== 'ended') {
-        if (messages.length && record.status === 'live') record = await api<VoiceInterview>(`/voice-interviews/${current.id}/messages`, {
-          method: 'POST', headers, body: JSON.stringify({ messages }),
-        });
+        if (messages.length && record.status === 'live') {
+          try {
+            record = await api<VoiceInterview>(`/voice-interviews/${current.id}/messages`, {
+              method: 'POST', headers, body: JSON.stringify({ messages }),
+            });
+          } catch (cause) {
+            if (!(acceptIncomplete && cause instanceof ApiError && [409, 422].includes(cause.status))) throw cause;
+            // Explicit incomplete confirmation permits ending with the already saved snapshot.
+          }
+        }
         record = await api<VoiceInterview>(`/voice-interviews/${current.id}/end`, {
           method: 'POST', headers, body: JSON.stringify({ message_count: record.messages.length, accept_incomplete: acceptIncomplete }),
         });
       }
       remember(record); setVoiceState('面试已结束'); setNeedsIncomplete(false);
     } catch (cause) {
-      if (cause instanceof Error && /转写尚未|转写未|转写不完整/.test(cause.message)) setNeedsIncomplete(true);
+      if (cause instanceof Error && /转写尚未|转写未|转写不完整|上限|不能被覆盖/.test(cause.message)) setNeedsIncomplete(true);
       fail(cause);
     } finally { if (alive.current) setBusy(false); }
   }
@@ -161,7 +171,9 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
     {!current ? <>
       {loading && <p role="status">正在检查语音服务…</p>}
       {config && !config.configured && <div className="voice-notice" role="status">语音服务尚未配置。请在后端 .env 配置百炼语音 API Key 和业务空间地址，然后重启后端。</div>}
+      {config && !config.review_configured && <p className="voice-notice">面试后复盘尚未配置。请在后端设置 DEEPSEEK_API_KEY；语音通话仍可单独进行。</p>}
       <form onSubmit={start}>
+        <InterviewContextFields links={links} onChange={setLinks} onExpired={onExpired} />
         <label>目标岗位<input required maxLength={100} value={role} onChange={e => setRole(e.target.value)} /></label>
         <label>项目经历<textarea required minLength={10} maxLength={5000} rows={4} value={experience} onChange={e => setExperience(e.target.value)} /></label>
         <p className="planned-note">开始后请求麦克风权限，语音发送至{config?.provider ?? '语音服务'}，本应用保存文字转写用于复盘，不保存原始录音。建议戴耳机；单场最长 {config?.max_minutes ?? 15} 分钟。</p>

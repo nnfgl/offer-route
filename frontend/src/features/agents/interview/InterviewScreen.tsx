@@ -3,6 +3,8 @@ import type { FormEvent } from 'react';
 import { api, ApiError } from '../../../lib/api';
 import type { Session } from '../../../lib/api';
 import './interview.css';
+import { InterviewContextFields } from './InterviewContextFields';
+import type { InterviewLinks } from './InterviewContextFields';
 
 type Report = {
   summary: string;
@@ -28,6 +30,7 @@ export function InterviewScreen({ session, onExpired }: { session: Session; onEx
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [links, setLinks] = useState<InterviewLinks>({ job_analysis_id: null, diagnosis_id: null });
   function fail(cause: unknown) {
     if (cause instanceof ApiError && cause.status === 401) { onExpired(); return; }
     setError(cause instanceof Error ? cause.message : '操作失败，请重试');
@@ -54,7 +57,7 @@ export function InterviewScreen({ session, onExpired }: { session: Session; onEx
     try {
       remember(await api<Interview>('/interviews', {
         method: 'POST', headers: { 'X-CSRF-Token': session.csrf_token },
-        body: JSON.stringify({ role, experience }),
+        body: JSON.stringify({ role, experience, ...links }),
       }));
       setAnswer('');
     } catch (cause) { fail(cause); } finally { setBusy(false); }
@@ -86,6 +89,7 @@ export function InterviewScreen({ session, onExpired }: { session: Session; onEx
     {busy && <p role="status">正在保存或加载面试…</p>}
     {!current ? <>
       <form onSubmit={start}>
+        <InterviewContextFields links={links} onChange={setLinks} onExpired={onExpired} />
         <label>目标岗位<input required maxLength={100} value={role} onChange={e => setRole(e.target.value)} /></label>
         <label>项目经历<textarea required minLength={10} maxLength={5000} rows={4} value={experience} onChange={e => setExperience(e.target.value)} placeholder="描述一个项目背景、你的职责与工作内容（至少 10 字）" /></label>
         <button className="primary-button" disabled={busy || !role.trim() || experience.trim().length < 10}>开始模拟面试</button>

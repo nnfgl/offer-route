@@ -3,7 +3,8 @@
 工作台默认进入[实时语音面试](voice-interview.md)：实时对话、可打断、结束后复盘。
 下文描述保留在“文字练习”页签的无密钥三轮练习，两个模式使用独立会话和 API。
 
-本分支 `feat/interview` 实现独立可用的文字面试，不依赖尚未完成的岗位、诊断或训练模块。
+本分支 `feat/interview` 保留独立可用的文字练习；岗位/诊断关联和统一表适配见
+[更新说明](interview-integration.md)，无需等待其他模块即可独立练习。
 输入由用户手动填写，建议使用模拟经历；不需要 DeepSeek API Key。
 
 ## 首版范围
@@ -21,7 +22,8 @@
 ## 联调输入与输出
 
 HTTP 路径、约束和状态码见 [API 约定](api.md)。
-当前创建接口只接受 `role`、`experience`。A/B 的输出尚未确定，因此先不依赖其内部字段。
+当前创建接口接受 `role`、`experience`，以及可选的 `job_analysis_id/diagnosis_id`。
+父记录由后端按登录用户校验并快照，不能直接传入 `parent_context`。
 `user_id` 始终来自登录态；调用方不得传入或覆盖。
 
 面试结束时，服务端构造公共 `AgentRequest`：
@@ -69,8 +71,8 @@ context.turns = 三轮 question / answer
 
 ## 共享文件变化与合并说明
 
-- `core/database.py`：只追加迁移 2，创建 `interviews` 及归属索引，不修改账号迁移。
-  若其他分支也追加迁移，应在合并时统一排序，避免两个已执行数据库具有相同迁移编号。
+- `core/database.py`：保留已发布实验迁移，加上布局兼容检查；本次不追加、重排编号，
+  由 A 协调正式迁移。统一表就绪后，关联会话由存储适配层写入公共表。
 - `main.py`：注册 `/api/v1/interviews`，只将面试状态设为 `available`。
 - 工作台及模块状态类型：添加模拟面试入口，其他模块仍为 `planned`。
 - `contracts.py` 和鉴权实现不变，复用现有协议与依赖。

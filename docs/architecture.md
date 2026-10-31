@@ -9,7 +9,8 @@ flowchart TD
     API --> Interview[模拟面试 / 规则复盘]
     Interview --> DB
     Browser <-->|WebRTC 语音 / 事件| VoiceCloud[百炼实时语音]
-    Interview -->|SDP 鉴权代理 / 面试后复盘| VoiceCloud
+    Interview -->|SDP 鉴权代理| VoiceCloud
+    Interview -->|面试后 JSON 复盘| SharedModel[公共 DeepSeek 客户端]
     API -. 下一阶段 .-> Flow[流程调度器]
     Flow -.-> Job[岗位分析 Agent]
     Flow -.-> Diagnosis[能力诊断 Agent]
@@ -17,7 +18,8 @@ flowchart TD
     Flow -.-> Interview
 ```
 
-实线表示已实现；虚线表示规划。文字练习使用固定规则，实时语音和面试后复盘需要配置百炼云服务。
+实线表示已实现；虚线表示规划。文字练习使用固定规则，实时语音使用百炼，
+结束后的模型复盘复用岗位分支的公共 DeepSeek 客户端。
 语音链路已通过模拟协议测试，真实云服务和麦克风验收仍需在密钥配置后执行。
 
 ## 公共基础
@@ -33,7 +35,8 @@ flowchart TD
 
 ## 后续扩展
 
-模拟面试通过追加迁移 2 保存归属用户的会话、问题、回答和复盘；不修改迁移 1。
+既有独立练习记录继续读取。本次不追加编号迁移；公共表经 A 正式迁移建好后，
+关联岗位的面试使用 `interview_sessions/interview_turns`，详细兼容边界见 `interview-integration.md`。
 写操作复用 Origin 和 CSRF 校验，读写查询均包含登录用户 ID。
 复盘复用 `AgentRequest` / `AgentResult`，待训练项保存在 `report.data.training_items`。
 共享能力档案和调度器尚未完成，因此当前不回写公共档案。联调约定见 `interview.md`。

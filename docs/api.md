@@ -50,6 +50,10 @@
 
 创建请求：`{"role":"Python 后端工程师","experience":"开发校园图书借阅系统，负责后端接口。"}`。
 岗位去除首尾空格后 1–100 字，经历 10–5000 字。
+可选 `job_analysis_id/diagnosis_id` 与共用数据库同名；诊断不能脱离岗位单独关联。
+`GET /interviews/contexts?job_analysis_id=...` 获取所属用户的已完成岗位和诊断选项。
+统一表未就绪时，携带岗位 ID 创建返回 503；独立练习不受影响。
+统一布局下没有旧实验表时，创建必须选择岗位。关联记录的归属、状态和岗位一致性由后端检查。
 回答请求：`{"round":1,"answer":"我负责……"}`，轮次 1–3，回答去除首尾空格后 1–5000 字。
 两个写接口均要求允许的 Origin 和 `X-CSRF-Token`，请求不接受 `user_id` 等额外字段。
 
@@ -66,7 +70,7 @@
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | /voice-interviews/config | 是否已填写服务配置、单场时长上限；不返回密钥或供应商 URL |
+| GET | /voice-interviews/config | 分别返回 configured（语音）、review_configured（DeepSeek 复盘），不返回密钥 |
 | POST | /voice-interviews | 创建语音会话，输入 `role/experience`（201） |
 | GET | /voice-interviews | 当前用户最近 50 条语音会话 |
 | GET | /voice-interviews/{id} | 转写、状态与复盘 |

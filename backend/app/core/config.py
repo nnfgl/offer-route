@@ -16,12 +16,17 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=86400, ge=60, le=604800)
     auth_rate_limit: int = Field(default=10, ge=1)
     auth_rate_window_seconds: int = Field(default=60, ge=1)
+    job_provider: Literal["rules", "deepseek"] = "rules"
+    deepseek_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="DEEPSEEK_API_KEY")
+    deepseek_model: str = Field(default="deepseek-flash", min_length=1, max_length=100)
+    model_timeout_seconds: float = Field(default=12, ge=1, le=14)
+    model_max_attempts: int = Field(default=2, ge=1, le=3)
+    model_max_output_tokens: int = Field(default=1800, ge=100, le=4000)
+    model_output_budget: int = Field(default=3600, ge=100, le=12000)
     voice_api_key: SecretStr = SecretStr("")
     voice_webrtc_url: str = ""
     voice_model: str = "qwen3.8-omni-flash-realtime"
     voice_name: str = "Tina"
-    voice_review_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-    voice_review_model: str = "qwen-plus"
     voice_max_minutes: int = Field(default=15, ge=1, le=30)
 
     @model_validator(mode="after")

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
-from app.agents.interview import voice_provider
+from app.agents.interview import shared_store, voice_provider
 from app.agents.interview.voice_schemas import (
     VoiceConnectInput,
     VoiceEndInput,
@@ -12,6 +12,7 @@ from app.agents.interview.voice_schemas import (
     VoiceInterview,
     VoiceMessagesInput,
 )
+from app.core.model_client import ModelFailure, ModelUsage
 from app.modules.auth.router import current_user, require_csrf
 from app.modules.auth.schemas import UserOutput
 
@@ -23,20 +24,11 @@ def fail(status: int, code: str, message: str):
 
 
 def find(connection, interview_id: str, user_id: str) -> VoiceInterview:
-    row = connection.execute(
-        "SELECT payload FROM voice_interviews WHERE id = ? AND user_id = ?",
-        (interview_id, user_id),
-    ).fetchone()
-    if not row:
-        fail(404, "voice_not_found", "语音面试记录不存在")
-    return VoiceInterview.model_validate_json(row["payload"])
+    return shared_store.find(connection, "voice", interview_id, user_id)
 
 
 def save(connection, interview: VoiceInterview, user_id: str):
-    connection.execute(
-        "UPDATE voice_interviews SET payload = ? WHERE id = ? AND user_id = ?",
-        (interview.model_dump_json(), interview.id, user_id),
-    )
+    shared_store.save(connection, "voice", interview, user_id)
 
 
 def require_config(request: Request):
@@ -53,6 +45,7 @@ def config(request: Request, user: UserOutput = Depends(current_user)):
     settings = request.app.state.settings
     return {
         "configured": voice_provider.configured(settings),
+        "review_configured": bool(settings.deepseek_api_key.get_secret_value()),
         "max_minutes": settings.voice_max_minutes,
         "provider": "阿里云百炼",
     }
@@ -61,12 +54,7 @@ def config(request: Request, user: UserOutput = Depends(current_user)):
 @router.get("", response_model=list[VoiceInterview])
 def list_interviews(request: Request, user: UserOutput = Depends(current_user)):
     with request.app.state.database.connect() as connection:
-        rows = connection.execute(
-            "SELECT payload FROM voice_interviews WHERE user_id = ? "
-            "ORDER BY created_at DESC, id DESC LIMIT 50",
-            (user.id,),
-        ).fetchall()
-    return [VoiceInterview.model_validate_json(row["payload"]) for row in rows]
+        return shared_store.history(connection, "voice", user.id)
 
 
 @router.get("/{interview_id}", response_model=VoiceInterview)
@@ -83,14 +71,21 @@ def get_interview(interview_id: str, request: Request, user: UserOutput = Depend
 )
 def create_interview(data: VoiceInput, request: Request, user: UserOutput = Depends(current_user)):
     require_config(request)
-    interview = VoiceInterview(
-        id=str(uuid4()), role=data.role, experience=data.experience, created_at=int(time.time())
-    )
     with request.app.state.database.connect() as connection:
-        connection.execute(
-            "INSERT INTO voice_interviews(id, user_id, created_at, payload) VALUES (?, ?, ?, ?)",
-            (interview.id, user.id, interview.created_at, interview.model_dump_json()),
+        connection.execute("BEGIN IMMEDIATE")
+        context = shared_store.parent_context(
+            connection, user.id, data.job_analysis_id, data.diagnosis_id
         )
+        interview = VoiceInterview(
+            id=str(uuid4()),
+            role=context.job_title if context else data.role,
+            experience=data.experience,
+            created_at=int(time.time()),
+            job_analysis_id=data.job_analysis_id,
+            diagnosis_id=data.diagnosis_id,
+            parent_context=context,
+        )
+        shared_store.save(connection, "voice", interview, user.id, create=True)
     return interview
 
 
@@ -180,9 +175,12 @@ def persist_messages(
 async def review_job(database, settings, interview_id: str, user_id: str, attempt: str):
     with database.connect() as connection:
         interview = find(connection, interview_id, user_id)
-    report, error = None, None
+    report, error, usage = None, None, ModelUsage()
     try:
         report = await asyncio.wait_for(voice_provider.generate_review(settings, interview), 70)
+        usage = ModelUsage.model_validate(report.data.get("usage", {}))
+    except ModelFailure as exc:
+        error, usage = exc.message, exc.usage
     except Exception:
         error = "复盘生成失败，已保存面试转写。请检查模型配置或重试。"
     with database.connect() as connection:
@@ -191,6 +189,7 @@ async def review_job(database, settings, interview_id: str, user_id: str, attemp
         if interview.report_attempt != attempt:
             return
         interview.report = report
+        interview.report_usage = usage
         interview.report_error = error
         interview.report_status = "failed" if error else "completed"
         save(connection, interview, user_id)
@@ -262,7 +261,8 @@ def retry_report(
     tasks: BackgroundTasks,
     user: UserOutput = Depends(current_user),
 ):
-    require_config(request)
+    if not request.app.state.settings.deepseek_api_key.get_secret_value():
+        fail(503, "review_not_configured", "复盘服务尚未配置，请配置后端 DEEPSEEK_API_KEY")
     with request.app.state.database.connect() as connection:
         connection.execute("BEGIN IMMEDIATE")
         interview = find(connection, interview_id, user.id)

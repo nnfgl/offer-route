@@ -1,4 +1,5 @@
 .module-entry{margin-top:16px}
+.interview-panel select{font:inherit;width:100%;min-width:0;border:1px solid #dce1d6;border-radius:7px;padding:12px 13px;background:#fff;color:#21392d}
 .interview-mode{display:flex;gap:12px;margin-top:30px}
 .interview-mode [aria-pressed=true]{background:#234b35;color:#fff}
 .voice-notice{padding:16px;background:#f0f4e8;border:1px solid #dfe5d7;border-radius:8px;font-size:13px}

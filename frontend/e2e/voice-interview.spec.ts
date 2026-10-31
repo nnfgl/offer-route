@@ -82,7 +82,7 @@ async function fakeApi(page: Page) {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
     let response: unknown = record;
-    if (path.endsWith('/config')) response = { configured: true, max_minutes: 15, provider: '模拟语音服务' };
+    if (path.endsWith('/config')) response = { configured: true, review_configured: true, max_minutes: 15, provider: '模拟语音服务' };
     else if (path.endsWith('/voice-interviews')) {
       if (method === 'GET') response = [];
       else { actions.push('create'); record = { ...record, ...route.request().postDataJSON() }; response = record; }
@@ -125,10 +125,20 @@ test('未配置语音服务时明确提示并保留文字练习入口', async ({
 test('语音可打断，结束前保存最后一句，结束后才生成复盘', async ({ page }, info) => {
   await fakeMedia(page);
   const api = await fakeApi(page);
+  await page.route('**/api/v1/interviews/contexts*', route => route.fulfill({ json: {
+    shared_storage_ready: true, requires_job_link: true,
+    jobs: [{ id: 'job-context', title: 'Python 后端工程师' }],
+    diagnoses: new URL(route.request().url()).searchParams.has('job_analysis_id')
+      ? [{ id: 'diagnosis-context', created_at: 1 }] : [],
+  } }));
   await login(page, `live-${info.project.name}`);
+  await page.getByLabel('关联岗位分析（必选）').selectOption('job-context');
+  await page.getByLabel('关联能力诊断（可选）').selectOption('diagnosis-context');
   await page.getByLabel('项目经历').fill('在校园图书借阅系统中负责后端接口和数据库设计。');
   await page.getByRole('button', { name: '开始语音面试', exact: true }).click();
   await expect(page.getByText('面试官正在说话', { exact: true })).toBeVisible();
+  expect((api.record() as unknown as { job_analysis_id: string }).job_analysis_id).toBe('job-context');
+  expect((api.record() as unknown as { diagnosis_id: string }).diagnosis_id).toBe('diagnosis-context');
   await expect(page.getByRole('button', { name: '文字练习', exact: true })).toBeDisabled();
   await page.screenshot({ path: info.outputPath('voice-live.png'), fullPage: true });
   await emit(page, { type: 'input_audio_buffer.speech_started', item_id: 'u1' });
@@ -179,7 +189,11 @@ test('转写失败时需明确确认，不能自动生成完整复盘', async ({
   await expect(page.getByRole('button', { name: '仅用已保存内容结束', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '开启麦克风', exact: true })).toBeDisabled();
   expect(api.actions).not.toContain('end');
+  await page.route('**/api/v1/voice-interviews/*/messages', route => route.fulfill({
+    status: 409, json: { error: { message: '已达到本场面试轮数上限' } },
+  }), { times: 1 });
   await page.getByRole('button', { name: '仅用已保存内容结束', exact: true }).click();
   await expect(page.getByText('本场使用不完整转写结束，复盘只采用已完整保存的回答。')).toBeVisible();
   expect(api.record().incomplete).toBe(true);
+  expect(api.record().messages.some(message => message.id === 'u1')).toBe(true);
 });

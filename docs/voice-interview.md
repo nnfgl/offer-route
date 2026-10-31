@@ -1,8 +1,9 @@
 # 实时语音面试与结束后复盘
 
 成员 D 的语音模块沿用 FastAPI + React，独立于尚未完成的岗位、诊断和训练模块。
-首版供应商为阿里云百炼。语音使用 Qwen-Omni-Realtime 原生双向音频，
-复盘使用独立文字模型；不将固定题库或浏览器朗读称为真实模型语音面试。
+语音使用阿里云百炼 Qwen-Omni-Realtime 原生双向音频，
+面试后复盘复用团队 `core/model_client.py` 的 DeepSeek 客户端。
+按本次确认保留实时可打断交互，不改成录音转写后逐句编辑确认。
 
 ## 当前验证状态
 
@@ -14,7 +15,8 @@
 ## 申请与配置（北京地域示例）
 
 1. 在[阿里云百炼](https://bailian.console.aliyun.com/)开通模型服务，
-   获取北京地域的 API Key 和业务空间 ID，并确认实时模型和复盘模型有调用权限及可用额度。
+   获取北京地域的 API Key 和业务空间 ID，并确认实时模型有调用权限及可用额度。
+   另准备团队公共 DeepSeek Key，用于面试结束后的复盘。
 2. 按根目录 README 安装锁定依赖，复制 `.env.example` 为 `.env`（已有文件时直接编辑）。
 3. 在后端 `.env` 设置：
 
@@ -23,19 +25,23 @@ OFFER_VOICE_API_KEY=填入你的密钥
 OFFER_VOICE_WEBRTC_URL=https://你的业务空间ID.cn-beijing.maas.aliyuncs.com/api/v1/webrtc/realtime
 OFFER_VOICE_MODEL=qwen3.8-omni-flash-realtime
 OFFER_VOICE_NAME=Tina
-OFFER_VOICE_REVIEW_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-OFFER_VOICE_REVIEW_MODEL=qwen-plus
+DEEPSEEK_API_KEY=填入团队使用的DeepSeek密钥
+OFFER_DEEPSEEK_MODEL=deepseek-flash
+OFFER_MODEL_TIMEOUT_SECONDS=12
+OFFER_MODEL_MAX_ATTEMPTS=2
+OFFER_MODEL_MAX_OUTPUT_TOKENS=1800
+OFFER_MODEL_OUTPUT_BUDGET=3600
 OFFER_VOICE_MAX_MINUTES=15
 ```
 
-也可以将复盘 URL 设置成控制台对应业务空间的
-`https://你的业务空间ID.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions`。
-其他地域应同时修改地址、Key 与可用模型，不混用不同地域配置。
+其他地域应同时修改语音地址、Key 与可用模型，不混用不同地域配置。
 模型名和权限以控制台及[官方实时文档](https://help.aliyun.com/zh/model-studio/realtime)为准。
 `/config` 的 `configured=true` 只表示已填写 Key 和 URL，不表示已通过云端连通性测试。
 
-`.env` 不入库，不将 Key 写入前端 `VITE_` 配置。`DEEPSEEK_API_KEY` 不参与这条语音链路。
-当前文字模型适配集中在 `voice_provider.py`，团队公共模型客户端完成后再统一替换该适配层。
+`.env` 不入库，不将 Key 写入前端 `VITE_` 配置。语音 Key 用于 SDP 鉴权，
+`DEEPSEEK_API_KEY` 只用于结束后的内容复盘，两个服务分开检测配置。
+原 `OFFER_VOICE_REVIEW_URL/MODEL` 已停用，请移除旧配置，统一使用公共 DeepSeek 设置。
+公共客户端沿用岗位分支的超时、有限重试、JSON 校验与用量预算，引用校验在同一重试边界内执行。
 `httpx` 已从开发依赖移为运行依赖，现有锁文件已包含同版本，无新增包版本。
 
 重启后端，打开工作台 → 进入模拟面试 → 实时语音。
@@ -48,6 +54,7 @@ sequenceDiagram
     participant UI as 浏览器
     participant API as FastAPI
     participant Cloud as 百炼
+    participant Model as 公共 DeepSeek 客户端
     UI->>API: 创建语音会话（Cookie + Origin + CSRF）
     UI->>API: offer_sdp
     API->>Cloud: SDP + 后端密钥
@@ -62,7 +69,7 @@ sequenceDiagram
     UI->>UI: 停止音轨，关闭 PeerConnection
     UI->>API: end（核对 message_count，冻结记录）
     API-->>UI: ended + processing
-    API->>Cloud: 用已结束的完整对话生成 JSON 复盘
+    API->>Model: 用已结束的完整对话生成 JSON 复盘
     UI->>API: 轮询报告
     API-->>UI: completed / failed
 ```
@@ -86,8 +93,10 @@ sequenceDiagram
 
 | 字段 | 类型 | 归属与用途 |
 | --- | --- | --- |
-| `role` | string | 当前手动输入目标岗位；之后映射 A 的岗位标题 |
-| `experience` | string | 当前手动输入模拟经历；之后由用户确认 B 提供的经历摘要 |
+| `role` | string | 独立练习手动填写；关联岗位时由后端采用 A 的岗位标题 |
+| `experience` | string | 用户填写的模拟经历 |
+| `job_analysis_id` | string / null | 关联已完成且属于当前用户的岗位分析 |
+| `diagnosis_id` | string / null | 可选；必须属于相同用户和同一岗位，且诊断已完成 |
 | `id` | string | 服务端生成的语音面试 ID，对应公共 `AgentResult.task_id` |
 | `messages[].id` | string | 云端消息项 ID；保存、重试和证据引用的去重键 |
 | `messages[].sequence` | integer | 对话中首次出现的顺序，0–200；不按 ASR 完成先后排列 |
@@ -99,7 +108,9 @@ sequenceDiagram
 
 模块内函数名无需与队友一致；API 路径、方法、字段名和类型应按上述协议联调。
 客户端不传 `user_id`，后端通过公共登录态确定归属。
-岗位要求和薄弱项的详细结构尚未确定，后续先共同扩展输入协议，再做映射。
+通过 `/api/v1/interviews/contexts` 选择岗位和诊断；后端读取其记录并形成 `parent_context` 快照，
+客户端不能伪造这个快照。岗位要求采用 A 的 `requirements`，诊断结果采用 B 的 `result_payload`。
+统一表尚未由 A 的迁移建立时，关联功能显示未开放，独立练习仍可使用。
 
 复盘使用公共 `AgentResult`。`data.evaluation_mode=model-transcript-v1`，
 固定四项：岗位理解、技术与经历、表达结构、反思改进，各 0–5 分，总分 20。
@@ -110,14 +121,16 @@ sequenceDiagram
 
 ## 持久化、失败与部署边界
 
-- 迁移 3 新建 `voice_interviews`，不更改已发布迁移 1/2；合并时与其他成员统一追加顺序。
+- 既有实验数据保留；本次不追加新编号迁移。统一表就绪后，关联会话使用
+  `interview_sessions/interview_turns`，无关联的旧练习继续读取原记录，见[数据库适配说明](interview-integration.md)。
 - 全部 API 按用户归属查询；写操作校验 Origin、CSRF。SDP/模型鉴权只在后端完成。
 - 语音数据经 WebRTC 直接传给供应商；应用只保存浏览器上传的转写，不保存原始录音。
   转写是浏览器提交的数据，不是供应商签名或独立能力验证，不应当作可信招聘评测证书。
 - 单会话不支持重复建连；刷新或断线可查看已保存转写、结束并复盘，再新建一场语音面试。
   不将这个流程称为无缝续接旧的云端对话。
 - 完整转写逐条保存；关闭页面前尚未完成的识别片段可能丢失，正式结束会等待并检查末句。
-- 后台复盘有 70 秒总超时，失败可重试；进程被终止时，90 秒后允许重试旧任务。
+- 后台复盘复用公共客户端默认 12 秒总时限、最多 2 次尝试和输出预算；后台外层另有 70 秒保护。
+  失败可重试，`report_usage` 和报告 `data.usage` 保存已报告用量；进程被终止时，90 秒后允许重试旧任务。
   多进程任务使用数据库 attempt 防止旧结果覆盖新结果；生产部署可替换为持久任务队列。
 - 浏览器执行单场时长限制，并在退出、结束、组件卸载时关闭音轨和连接。
   该限制不是供应商侧强制费用上限；WebRTC 直连不支持由本后端强制撤销已建立的媒体连接。
