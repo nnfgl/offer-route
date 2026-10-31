@@ -1,0 +1,23 @@
+name: 开发任务
+description: 按模块拆解一项可验收的开发任务
+title: '[模块] '
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标与使用场景
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: 输入输出及依赖模块
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收条件
+      placeholder: 明确成功、失败和无权限时的行为。
+    validations:
+      required: true
