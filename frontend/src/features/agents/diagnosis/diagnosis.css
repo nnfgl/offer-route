@@ -1,0 +1,18 @@
+.job-input-panel select { font: inherit; background: #fff; border: 1px solid #dce1d6; border-radius: 7px; padding: 11px 13px; font-size: 14px; color: #21392d; width: 100%; }
+.job-input-panel select:focus { outline: 2px solid #7c9862; outline-offset: 1px; }
+.job-input-panel select:disabled { opacity: .6; }
+.diagnosis-group { border-top: 1px solid #e8ecdf; margin-top: 25px; padding-top: 15px; }
+.diagnosis-group h3 { font-size: 16px; margin: 8px 0; }
+.diagnosis-group h3 > span { margin-left: 10px; font-size: 12px; border-radius: 20px; background: #eef3e6; padding: 2px 8px; color: #6d8353; }
+.diagnosis-card { padding: 16px; background: #f9faf6; border: 1px solid #e7ebdf; border-radius: 8px; margin-bottom: 12px; overflow-wrap: anywhere; }
+.diagnosis-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.diagnosis-card h4 { font-size: 14px; line-height: 1.9; margin: 10px 0 6px; font-weight: 500; }
+.diagnosis-claim { font-size: 12px; color: #66735b; line-height: 1.9; margin: 0 0 10px; }
+.diagnosis-card blockquote { font-size: 12px; border-left: 2px solid #c7d5ae; color: #718060; padding-left: 12px; margin: 0; line-height: 1.9; }
+.evidence-badge, .pending-badge, .confidence { font-size: 11px; border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+.evidence-self_claimed { background: #f6f1e4; color: #91743a; }
+.evidence-portfolio_supported { background: #e6eff6; color: #3f6b94; }
+.evidence-task_verified { background: #e9efdc; color: #4d6537; }
+.pending-badge { background: #f6e6e0; color: #a05a3c; }
+.confidence { background: #eef1ec; color: #7b8672; margin-left: auto; }
+.diagnosis-card.diagnosis-pending { background: #fbf9f3; border-color: #ece4d0; }

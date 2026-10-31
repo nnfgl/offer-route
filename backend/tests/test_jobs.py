@@ -314,6 +314,8 @@ def test_migration_from_original_schema_preserves_accounts(tmp_path):
     settings = Settings(_env_file=None, environment="test", database_path=path)
     with TestClient(create_app(settings)) as client:
         with client.app.state.database.connect() as connection:
-            assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+            assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
             assert connection.execute("SELECT id FROM users").fetchone()[0] == "existing"
             assert connection.execute("SELECT COUNT(*) FROM job_analysis_tasks").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM resumes").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM diagnosis_tasks").fetchone()[0] == 0

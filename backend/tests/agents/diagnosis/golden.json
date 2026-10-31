@@ -1,0 +1,80 @@
+{
+  "name": "diagnosis-golden",
+  "version": 1,
+  "cases": [
+    {
+      "id": "case_01",
+      "name": "后端量化实证（任务验证）",
+      "resume_text": "熟悉 Python，负责推荐系统开发，接口 QPS 提升 30%。",
+      "job_requirements": [
+        {"id": "R1", "text": "熟悉 Python", "priority": "required", "category": "skill", "quote": "熟悉 Python"},
+        {"id": "R2", "text": "熟悉 Redis 缓存", "priority": "preferred", "category": "skill", "quote": "熟悉 Redis 缓存"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "strengths", "claim_content": "简历包含与「熟悉 Python」匹配的内容且有量化结果佐证", "matched_requirement": "熟悉 Python", "evidence_type": "task_verified", "evidence_excerpt": "接口 QPS 提升 30%", "confidence_score": 0.9},
+        {"requirement_id": "R2", "bucket": "gaps", "claim_content": "未在简历中找到相关证据", "matched_requirement": "熟悉 Redis 缓存", "evidence_type": null, "evidence_excerpt": null, "confidence_score": 0.9}
+      ]
+    },
+    {
+      "id": "case_02",
+      "name": "纯自述无佐证（自述）",
+      "resume_text": "熟练使用 Python 语言，也了解 Docker 容器化的基本用法。",
+      "job_requirements": [
+        {"id": "R1", "text": "熟练使用 Python", "priority": "required", "category": "skill", "quote": "熟练使用 Python"},
+        {"id": "R2", "text": "熟悉 Docker 容器化", "priority": "preferred", "category": "skill", "quote": "熟悉 Docker 容器化"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "pending_verification", "claim_content": "简历包含与「熟练使用 Python」匹配的内容但缺少佐证", "matched_requirement": "熟练使用 Python", "evidence_type": "self_claimed", "evidence_excerpt": "熟练使用 Python", "confidence_score": 0.6},
+        {"requirement_id": "R2", "bucket": "pending_verification", "claim_content": "简历包含与「熟悉 Docker 容器化」匹配的内容但缺少佐证", "matched_requirement": "熟悉 Docker 容器化", "evidence_type": "self_claimed", "evidence_excerpt": "Docker 容器化", "confidence_score": 0.6}
+      ]
+    },
+    {
+      "id": "case_03",
+      "name": "作品链接支持（作品支持）",
+      "resume_text": "熟悉 Vue，我开源了一个组件库，仓库见 https://github.com/me/vue-kit。",
+      "job_requirements": [
+        {"id": "R1", "text": "熟悉 Vue 前端框架", "priority": "required", "category": "skill", "quote": "熟悉 Vue 前端框架"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "strengths", "claim_content": "简历包含与「熟悉 Vue 前端框架」匹配的内容且有作品链接佐证", "matched_requirement": "熟悉 Vue 前端框架", "evidence_type": "portfolio_supported", "evidence_excerpt": "https://github.com/me/vue-kit", "confidence_score": 0.8}
+      ]
+    },
+    {
+      "id": "case_04",
+      "name": "完全缺口（能力不足）",
+      "resume_text": "两年市场运营经验，擅长活动策划与线上推广，熟悉 Excel 报表制作。",
+      "job_requirements": [
+        {"id": "R1", "text": "掌握 SQL 数据库", "priority": "required", "category": "skill", "quote": "掌握 SQL 数据库"},
+        {"id": "R2", "text": "熟悉 Java 后端", "priority": "required", "category": "skill", "quote": "熟悉 Java 后端"},
+        {"id": "R3", "text": "有分布式系统经验", "priority": "preferred", "category": "experience", "quote": "有分布式系统经验"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "gaps", "claim_content": "未在简历中找到相关证据", "matched_requirement": "掌握 SQL 数据库", "evidence_type": null, "evidence_excerpt": null, "confidence_score": 0.9},
+        {"requirement_id": "R2", "bucket": "gaps", "claim_content": "未在简历中找到相关证据", "matched_requirement": "熟悉 Java 后端", "evidence_type": null, "evidence_excerpt": null, "confidence_score": 0.9},
+        {"requirement_id": "R3", "bucket": "gaps", "claim_content": "未在简历中找到相关证据", "matched_requirement": "有分布式系统经验", "evidence_type": null, "evidence_excerpt": null, "confidence_score": 0.9}
+      ]
+    },
+    {
+      "id": "case_05",
+      "name": "误导性数字（规则高估为任务验证）",
+      "resume_text": "我熟悉 Python，还带领团队把协作效率提升了 30%。",
+      "job_requirements": [
+        {"id": "R1", "text": "熟悉 Python", "priority": "required", "category": "skill", "quote": "熟悉 Python"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "pending_verification", "claim_content": "简历包含与「熟悉 Python」匹配的内容，但 30% 与 Python 技能无关，仍属自述", "matched_requirement": "熟悉 Python", "evidence_type": "self_claimed", "evidence_excerpt": "熟悉 Python", "confidence_score": 0.6}
+      ]
+    },
+    {
+      "id": "case_06",
+      "name": "项目自述被高估（规则高估为作品支持）",
+      "resume_text": "熟悉 React，在校做过一个课程设计项目。",
+      "job_requirements": [
+        {"id": "R1", "text": "熟悉 React 前端开发", "priority": "required", "category": "skill", "quote": "熟悉 React 前端开发"}
+      ],
+      "golden": [
+        {"requirement_id": "R1", "bucket": "pending_verification", "claim_content": "简历包含与「熟悉 React 前端开发」匹配的内容，但无链接/仓库可验证", "matched_requirement": "熟悉 React 前端开发", "evidence_type": "self_claimed", "evidence_excerpt": "熟悉 React", "confidence_score": 0.6}
+      ]
+    }
+  ]
+}

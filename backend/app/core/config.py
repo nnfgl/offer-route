@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     auth_rate_limit: int = Field(default=10, ge=1)
     auth_rate_window_seconds: int = Field(default=60, ge=1)
     job_provider: Literal["rules", "deepseek"] = "rules"
+    diagnosis_provider: Literal["rules", "deepseek"] = "rules"
     deepseek_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="DEEPSEEK_API_KEY")
     deepseek_model: str = Field(default="deepseek-flash", min_length=1, max_length=100)
     model_timeout_seconds: float = Field(default=12, ge=1, le=14)
