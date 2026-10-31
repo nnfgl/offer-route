@@ -29,6 +29,15 @@ MIGRATIONS = [
       payload TEXT NOT NULL
     );
     CREATE INDEX interviews_owner ON interviews(user_id, created_at);
+    """,
+    """
+    CREATE TABLE voice_interviews (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      payload TEXT NOT NULL
+    );
+    CREATE INDEX voice_interviews_owner ON voice_interviews(user_id, created_at);
     """
 ]
 

@@ -9,6 +9,7 @@ test('独立完成三轮面试，刷新恢复与查看复盘', async ({ page }, 
   await page.getByLabel('确认密码').fill('a-unique-long-password');
   await page.getByRole('button', { name: '创建账户并进入' }).click();
   await page.getByRole('button', { name: '进入模拟面试' }).click();
+  await page.getByRole('button', { name: '文字练习', exact: true }).click();
   await page.getByLabel('项目经历').fill('在校园图书借阅系统中负责后端接口开发和数据库设计。');
   await page.getByRole('button', { name: '开始模拟面试' }).click();
   await expect(page.getByRole('heading', { name: '第 1 / 3 轮' })).toBeVisible();
@@ -17,6 +18,7 @@ test('独立完成三轮面试，刷新恢复与查看复盘', async ({ page }, 
   await expect(page.getByRole('heading', { name: '第 2 / 3 轮' })).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: '进入模拟面试' }).click();
+  await page.getByRole('button', { name: '文字练习', exact: true }).click();
   await page.getByRole('button', { name: /继续第 2 轮/ }).click();
   await expect(page.getByText('我实现了图书借阅接口，并编写测试。', { exact: true })).toBeVisible();
   await page.getByLabel('你的回答').fill('我对比了关系数据库和文档数据库，根据事务需求选择 SQLite。');
@@ -52,6 +54,7 @@ test('加载失败可重试，提交失败保留回答并能继续', async ({ pa
     status: 503, json: { error: { message: '模拟加载失败' } },
   }));
   await page.getByRole('button', { name: '进入模拟面试' }).click();
+  await page.getByRole('button', { name: '文字练习', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('模拟加载失败');
   await page.unroute('**/api/v1/interviews');
   await page.getByRole('button', { name: '刷新记录' }).click();

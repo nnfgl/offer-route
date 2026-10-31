@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.interview.router import router as interview_router
+from app.agents.interview.voice_router import router as voice_router
 from app.core.config import Settings
 from app.core.database import Database
 from app.core.errors import install_error_handlers
@@ -27,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = RateLimiter(
         settings.auth_rate_limit, settings.auth_rate_window_seconds
     )
+    app.state.voice_limiter = RateLimiter(10, 60)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -48,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(router, prefix="/api/v1")
     app.include_router(interview_router, prefix="/api/v1")
+    app.include_router(voice_router, prefix="/api/v1")
 
     @app.get("/api/v1/health", tags=["system"])
     def health():

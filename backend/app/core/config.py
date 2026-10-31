@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=86400, ge=60, le=604800)
     auth_rate_limit: int = Field(default=10, ge=1)
     auth_rate_window_seconds: int = Field(default=60, ge=1)
+    voice_api_key: SecretStr = SecretStr("")
+    voice_webrtc_url: str = ""
+    voice_model: str = "qwen3.8-omni-flash-realtime"
+    voice_name: str = "Tina"
+    voice_review_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    voice_review_model: str = "qwen-plus"
+    voice_max_minutes: int = Field(default=15, ge=1, le=30)
 
     @model_validator(mode="after")
     def validate_production(self):

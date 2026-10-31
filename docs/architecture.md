@@ -8,6 +8,8 @@ flowchart TD
     Auth --> DB[(SQLite)]
     API --> Interview[模拟面试 / 规则复盘]
     Interview --> DB
+    Browser <-->|WebRTC 语音 / 事件| VoiceCloud[百炼实时语音]
+    Interview -->|SDP 鉴权代理 / 面试后复盘| VoiceCloud
     API -. 下一阶段 .-> Flow[流程调度器]
     Flow -.-> Job[岗位分析 Agent]
     Flow -.-> Diagnosis[能力诊断 Agent]
@@ -15,7 +17,8 @@ flowchart TD
     Flow -.-> Interview
 ```
 
-实线表示已实现；虚线表示规划。模拟面试可独立执行三轮文字问答和规则复盘，尚无模型调用。
+实线表示已实现；虚线表示规划。文字练习使用固定规则，实时语音和面试后复盘需要配置百炼云服务。
+语音链路已通过模拟协议测试，真实云服务和麦克风验收仍需在密钥配置后执行。
 
 ## 公共基础
 

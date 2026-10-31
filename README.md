@@ -6,8 +6,11 @@
 
 已实现公共架构与账号模块：注册、登录、当前用户、会话恢复、退出登录、受保护工作台。
 模拟面试已支持独立的三轮文字问答、历史恢复和有原文依据的规则复盘。
+新增实时语音面试：WebRTC 双向语音、流式转写、插话打断，以及结束后的异步模型复盘。
+语音链路已接入百炼协议并通过模拟服务测试；真实麦克风与云服务验收需配置密钥后进行。
 岗位分析、能力诊断、实战训练尚未实现，界面明确标记为建设中。
 本阶段不需要 DeepSeek API Key。
+文字练习无需密钥；语音面试需要百炼 API Key、对应业务空间地址及模型权限，见[语音配置](docs/voice-interview.md)。
 
 ## 技术与目录
 
@@ -20,7 +23,7 @@ backend/app/
     job/                岗位分析（待开发）
     diagnosis/          能力诊断（待开发）
     training/           实战训练（待开发）
-    interview/          文字面试与规则复盘
+    interview/          实时语音、文字练习与面试后复盘
     orchestration/      流程调度（待开发）
 backend/tests/          账号、面试与安全边界测试
 frontend/src/
@@ -80,6 +83,7 @@ GitHub push/PR 自动运行后端测试、前端构建与浏览器测试。
 - [接口约定](docs/api.md)
 - [四人分工与业务任务](docs/team-plan.md)
 - [模拟面试使用与联调](docs/interview.md)
+- [实时语音配置、接口与验收](docs/voice-interview.md)
 - [协作流程](CONTRIBUTING.md)
 
 生产上线需 HTTPS、显式来源配置、持久数据库、备份，以及按部署规模提供共享限流。

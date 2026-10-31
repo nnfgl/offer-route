@@ -1,4 +1,18 @@
 .module-entry{margin-top:16px}
+.interview-mode{display:flex;gap:12px;margin-top:30px}
+.interview-mode [aria-pressed=true]{background:#234b35;color:#fff}
+.voice-notice{padding:16px;background:#f0f4e8;border:1px solid #dfe5d7;border-radius:8px;font-size:13px}
+.voice-stage{background:#f4f7ee;border-radius:12px;padding:24px;text-align:center;margin:24px 0}
+.voice-orb{width:96px;height:96px;display:grid;place-items:center;margin:0 auto;border-radius:50%;background:#dfe8cb;color:#234b35;font-size:36px}
+.voice-orb-active{box-shadow:0 0 0 10px #e9efde,0 0 0 20px #f0f4e8}
+.voice-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;align-items:center;margin:20px 0}
+.voice-controls .primary-button{margin:0}
+.voice-transcript{list-style:none;padding:0;display:grid;gap:16px}
+.voice-message{padding:16px;border-radius:8px;background:#f4f7ee;white-space:pre-wrap}
+.voice-message strong{font-size:12px;color:#6a7c5b}
+.voice-message p{margin:8px 0 0}
+.voice-user{background:#e9f1e3;margin-left:24px}
+.interview-feedback blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid #a1b889;background:#f4f7ee}
 .interview-panel{margin-top:32px;padding:28px;border:1px solid #dfe5d7;border-radius:12px;background:#fff;overflow-wrap:anywhere}
 .interview-panel>.section-heading{flex-wrap:wrap}
 .interview-panel p,.interview-panel li{font-size:14px;line-height:1.9}
