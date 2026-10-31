@@ -19,7 +19,7 @@ backend/app/
     job/                岗位分析（待开发）
     diagnosis/          能力诊断（待开发）
     training/           实战训练（待开发）
-    interview/          模拟面试（待开发）
+    interview/          文字与语音模拟面试（待开发）
     orchestration/      流程调度（待开发）
 backend/tests/          账号与安全边界测试
 frontend/src/
@@ -77,6 +77,7 @@ GitHub push/PR 自动运行后端测试、前端构建与浏览器测试。
 
 - [架构与安全边界](docs/architecture.md)
 - [接口约定](docs/api.md)
+- [成员 D：文字与语音面试范围](docs/interview.md)
 - [四人分工与业务任务](docs/team-plan.md)
 - [协作流程](CONTRIBUTING.md)
 
