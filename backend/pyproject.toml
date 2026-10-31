@@ -21,6 +21,9 @@ dev = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1"]
 [tool.setuptools.packages.find]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.agents.training" = ["*.sql", "fixtures/*.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
