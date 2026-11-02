@@ -99,3 +99,5 @@ class TrainingKnowledge:
         )
         self._validate(collection)
         return {"documents": collection.count(), "embedding_profile": PROFILE, "synthetic": True}
+
+print(12)
