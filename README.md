@@ -4,11 +4,17 @@
 
 ## 当前阶段
 
-已实现公共架构与账号模块：注册、登录、当前用户、会话恢复、退出登录、受保护工作台。
-岗位分析已实现：粘贴招聘要求，区分必需、加分和待确认条件，逐条核对原文，
-保存并恢复当前用户的最近分析记录。流程调度入口已接入岗位分析；能力诊断、
-实战训练、模拟面试仍在建设中，由对应成员独立开发。
-默认本地规则提取，无需密钥；可选开启 DeepSeek 分析。
+已实现注册登录、会话恢复和四个业务入口，统一通过 `app.main:app` 启动：
+
+- 岗位分析：粘贴招聘要求，提取要求与逐字证据，保存历史。
+- 能力诊断：选择已完成岗位分析，对照简历输出优势、缺口与待验证项。
+- SQL 实战训练：从诊断的 SQL 缺口创建练习，提交查询并进行确定性校验，保留尝试和证据。
+- 模拟面试：独立或关联岗位/诊断的三轮文字练习；可选实时语音及结束后复盘。
+
+岗位分析、诊断、SQL 训练与文字面试均可离线使用，不需要模型密钥、MySQL 或 Chroma。
+语音需配置云服务，DeepSeek 可用于岗位/诊断分析和语音复盘。
+四阶段当前由用户逐步操作，共用账号和关联记录；完整自动调度及面试建议自动生成训练仍待后续实现。
+集成范围、数据库升级和验证边界见 [整合说明](docs/integration.md)。
 
 ## 技术与目录
 
@@ -19,16 +25,16 @@ backend/app/
   agents/
     contracts.py        Agent 输入输出协议
     job/                岗位分析、证据定位与结构化结果
-    diagnosis/          能力诊断（待开发）
-    training/           实战训练（待开发）
-    interview/          文字与语音模拟面试（待开发）
+    diagnosis/          简历诊断、证据校验与置信度过滤
+    training/           SQL 任务、受限校验与训练证据
+    interview/          文字练习、实时语音与复盘
     orchestration/      岗位分析调度与任务状态持久化
   modules/jobs/         岗位分析 API、历史与权限隔离
 backend/tests/          账号与安全边界测试
 frontend/src/
   features/auth/        账户页面
   features/workspace/   受保护工作台
-  features/agents/job/  岗位分析页面，其余三个业务页面待开发
+  features/agents/      岗位、诊断、训练和模拟面试页面
   lib/                  统一请求与类型
 docs/                   架构、API、四人分工和协作规范
 .github/                CI、Issue 和 PR 模板
@@ -45,7 +51,7 @@ Python FastAPI + React / TypeScript / Vite；当前数据库为 SQLite，后续�
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
 .\.venv\Scripts\python.exe -m pip install --no-deps -e backend
-Copy-Item .env.example .env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -63,6 +69,7 @@ npm.cmd run dev
 
 登录后点击“开始岗位分析”，可使用“填入示例”完成一次分析，点击“查看原文”
 核对证据。页面刷新后，重新进入岗位分析并打开“最近分析”可恢复记录。
+返回工作台进入能力诊断，再选择诊断中的 SQL 缺口开展训练；模拟面试可关联同一岗位和诊断。
 
 ## 可选：使用 DeepSeek
 
@@ -89,6 +96,7 @@ macOS/Linux 使用 `.venv/bin/python` 替代 Python 路径，使用 `cp .env.exa
 ## 验证
 
 ```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.training-local.txt
 .\.venv\Scripts\python.exe -m pytest backend/tests -q
 cd frontend
 npm.cmd run build
@@ -101,6 +109,7 @@ GitHub push/PR 自动运行后端测试、前端构建与浏览器测试。
 
 ## 协作入口
 
+- [四模块整合与验收](docs/integration.md)
 - [架构与安全边界](docs/architecture.md)
 - [接口约定](docs/api.md)
 - [成员 D：文字与语音面试范围](docs/interview.md)
