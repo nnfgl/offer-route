@@ -20,7 +20,20 @@ MIGRATIONS = [
       expires_at INTEGER NOT NULL
     );
     CREATE INDEX sessions_expiry ON sessions(expires_at);
+    """,
     """
+    CREATE TABLE job_analysis_tasks (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      source_text TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      status TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX job_tasks_owner ON job_analysis_tasks(user_id, created_at DESC);
+    """,
 ]
 
 

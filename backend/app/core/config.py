@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=86400, ge=60, le=604800)
     auth_rate_limit: int = Field(default=10, ge=1)
     auth_rate_window_seconds: int = Field(default=60, ge=1)
+    job_provider: Literal["rules", "deepseek"] = "rules"
+    deepseek_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="DEEPSEEK_API_KEY")
+    deepseek_model: str = Field(default="deepseek-flash", min_length=1, max_length=100)
+    model_timeout_seconds: float = Field(default=12, ge=1, le=14)
+    model_max_attempts: int = Field(default=2, ge=1, le=3)
+    model_max_output_tokens: int = Field(default=1800, ge=100, le=4000)
+    model_output_budget: int = Field(default=3600, ge=100, le=12000)
 
     @model_validator(mode="after")
     def validate_production(self):
