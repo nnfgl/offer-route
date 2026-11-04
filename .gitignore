@@ -1,4 +1,5 @@
 .venv/
+offer-route/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -22,3 +23,10 @@ playwright-report/
 test-results/
 .tools/
 *.egg-info/
+
+# Task C: local-only database experiments, credentials, Chroma and verification artifacts.
+.local-training/
+.env.training-local
+.env.training-local.*
+backend/requirements.training-local.freeze.txt
+backend/build/

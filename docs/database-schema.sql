@@ -81,7 +81,7 @@ CREATE TABLE interview_sessions (
     FOREIGN KEY(job_analysis_id, user_id) REFERENCES job_analysis_tasks(id, user_id) ON DELETE CASCADE,
     FOREIGN KEY(diagnosis_id, user_id) REFERENCES diagnosis_tasks(id, user_id) ON DELETE CASCADE
 );
-CREATE INDEX interviews_owner ON interview_sessions(user_id, created_at DESC);
+CREATE INDEX interview_sessions_owner ON interview_sessions(user_id, created_at DESC);
 CREATE INDEX interviews_job ON interview_sessions(job_analysis_id, user_id);
 CREATE INDEX interviews_diagnosis ON interview_sessions(diagnosis_id, user_id);
 

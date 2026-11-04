@@ -19,7 +19,15 @@ export default defineConfig({
       command: 'python -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
       cwd: '..',
       url: 'http://127.0.0.1:8000/api/v1/health',
-      env: { OFFER_DATABASE_PATH: '.tools/browser-tests.db', OFFER_JOB_PROVIDER: 'rules', DEEPSEEK_API_KEY: '' },
+      env: {
+        OFFER_DATABASE_PATH: '.tools/browser-tests.db',
+        OFFER_ENVIRONMENT: 'test',
+        OFFER_JOB_PROVIDER: 'rules',
+        OFFER_DIAGNOSIS_PROVIDER: 'rules',
+        DEEPSEEK_API_KEY: '',
+        // Multiple browser projects share one test server and authenticate repeatedly.
+        OFFER_AUTH_RATE_LIMIT: '1000',
+      },
       reuseExistingServer: !process.env.CI,
     },
     {

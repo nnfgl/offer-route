@@ -11,7 +11,7 @@ test('注册、刷新恢复、退出和重新登录', async ({ page }, testInfo)
   await page.getByLabel('确认密码').fill(password);
   await page.getByRole('button', { name: '创建账户并进入' }).click();
   await expect(page.getByRole('heading', { name: '你好，测试同学。' })).toBeVisible();
-  await expect(page.getByText('即将开放', { exact: true })).toHaveCount(3);
+  await expect(page.getByText('即将开放', { exact: true })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('heading', { name: '你好，测试同学。' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.length)).toBe(0);

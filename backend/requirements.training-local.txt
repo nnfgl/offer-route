@@ -1,0 +1,4 @@
+# Preserve every version in the team's requirements.lock.
+-r requirements.lock
+PyMySQL[rsa]==1.2.3
+chromadb==1.5.9
