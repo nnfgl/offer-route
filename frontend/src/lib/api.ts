@@ -2,7 +2,7 @@ export type User = { id: string; email: string; display_name: string };
 export type Session = { user: User; csrf_token: string };
 export type Workspace = {
   user: User;
-  modules: { id: string; title: string; status: 'planned' }[];
+  modules: { id: string; title: string; status: 'planned' | 'available' }[];
 };
 
 export class ApiError extends Error {

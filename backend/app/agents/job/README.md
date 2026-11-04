@@ -1,3 +1,4 @@
 # 岗位分析 Agent
 
-待开发。负责人 A；入口协议参见 `../contracts.py`，验收条件参见 docs/team-plan.md。
+负责人 A。已实现本地规则提取、DeepSeek JSON 分析、引用核验、原文定位及 AgentResult。
+输入输出协议参见 schemas.py、../contracts.py，联调说明参见 docs/job-analysis.md。
