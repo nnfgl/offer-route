@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, ApiError } from '../../../lib/api';
 
 export type InterviewLinks = { job_analysis_id: string | null; diagnosis_id: string | null };
+export type FixedInterviewContext = { title: string; job_analysis_id: string; diagnosis_id: string };
 type Choices = {
   shared_storage_ready: boolean; requires_job_link: boolean;
   jobs: { id: string; title: string }[];

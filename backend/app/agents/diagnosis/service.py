@@ -7,6 +7,8 @@
 import asyncio
 import json
 import time
+from contextlib import nullcontext
+from sqlite3 import Connection
 from threading import BoundedSemaphore
 from uuid import uuid4
 
@@ -44,7 +46,9 @@ class DiagnosisWorkflow:
         # 诊断是重模型任务，独立槽位，缓解与岗位分析的并发争抢。
         self.slots = BoundedSemaphore(2)
 
-    def create_resume(self, user_id: str, title: str, source_text: str) -> Resume:
+    def create_resume(
+        self, user_id: str, title: str, source_text: str, *, connection: Connection | None = None
+    ) -> Resume:
         resume = Resume(
             id=str(uuid4()),
             user_id=user_id,
@@ -52,8 +56,8 @@ class DiagnosisWorkflow:
             source_text=source_text,
             created_at=int(time.time()),
         )
-        with self.database.connect() as connection:
-            connection.execute(
+        with self.database.connect() if connection is None else nullcontext(connection) as db:
+            db.execute(
                 "INSERT INTO resumes (id, user_id, title, source_text, parsed_payload, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (
@@ -146,11 +150,13 @@ class DiagnosisWorkflow:
                     (payload, now, row["id"], row["user_id"]),
                 )
 
-    async def run(self, user_id: str, resume_id: str, job_analysis_id: str) -> DiagnosisTask:
+    async def run(
+        self, user_id: str, resume_id: str, job_analysis_id: str, *, task_id: str | None = None
+    ) -> DiagnosisTask:
         resume = self.get_resume(user_id, resume_id)
         requirements = self.job_requirements(user_id, job_analysis_id)
         task = DiagnosisTask(
-            id=str(uuid4()),
+            id=task_id or str(uuid4()),
             user_id=user_id,
             job_analysis_id=job_analysis_id,
             resume_id=resume_id,
@@ -161,9 +167,10 @@ class DiagnosisWorkflow:
         self._insert(task)
         try:
             if self.settings.diagnosis_provider == "deepseek":
-                result, _ = await diagnose_with_model(
+                result, usage = await diagnose_with_model(
                     self.model, load_template(), resume.source_text, requirements
                 )
+                result.usage = usage
             else:
                 result = rule_diagnose(resume.source_text, requirements)
             result = apply_confidence_filter(result)
@@ -176,7 +183,7 @@ class DiagnosisWorkflow:
             )
         except ModelFailure as exc:
             task.status = "failed"
-            task.result_payload = DiagnosisResult(summary=exc.message)
+            task.result_payload = DiagnosisResult(summary=exc.message, usage=exc.usage)
         except asyncio.CancelledError:
             task.status = "failed"
             task.result_payload = DiagnosisResult(summary="诊断被中断，请重新提交")

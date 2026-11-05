@@ -13,7 +13,8 @@
 
 岗位分析、诊断、SQL 训练与文字面试均可离线使用，不需要模型密钥、MySQL 或 Chroma。
 语音需配置云服务，DeepSeek 可用于岗位/诊断分析和语音复盘。
-四阶段当前由用户逐步操作，共用账号和关联记录；完整自动调度及面试建议自动生成训练仍待后续实现。
+从工作台的“开始求职路线”一次提交岗位与简历，系统依次执行岗位分析、诊断并创建适用的 SQL 练习。
+完成练习和关联面试后，路线汇总原文、训练验证证据、面试复盘和模型用量，并生成可提交的面试后练习。
 集成范围、数据库升级和验证边界见 [整合说明](docs/integration.md)。
 
 ## 技术与目录
@@ -28,7 +29,7 @@ backend/app/
     diagnosis/          简历诊断、证据校验与置信度过滤
     training/           SQL 任务、受限校验与训练证据
     interview/          文字练习、实时语音与复盘
-    orchestration/      岗位分析调度与任务状态持久化
+    orchestration/      求职路线调度、进度与能力档案
   modules/jobs/         岗位分析 API、历史与权限隔离
 backend/tests/          账号与安全边界测试
 frontend/src/
@@ -67,9 +68,9 @@ npm.cmd run dev
 初次运行自动创建本地数据库。没有预置账号，请在页面注册。
 前端通过 Vite 将 `/api` 代理给后端，Cookie 不保存在 localStorage。
 
-登录后点击“开始岗位分析”，可使用“填入示例”完成一次分析，点击“查看原文”
-核对证据。页面刷新后，重新进入岗位分析并打开“最近分析”可恢复记录。
-返回工作台进入能力诊断，再选择诊断中的 SQL 缺口开展训练；模拟面试可关联同一岗位和诊断。
+登录后点击“开始求职路线”，选择“填入示例”并创建路线。完成 SQL 练习后，返回路线进入关联面试。
+复盘生成后可在同一页查看岗位能力档案，并保存面试后练习。刷新页面后从“历史路线”重新打开进度。
+工作台同时提供四个独立模块入口。
 
 ## 可选：使用 DeepSeek
 
@@ -77,6 +78,7 @@ npm.cmd run dev
 
 ```dotenv
 OFFER_JOB_PROVIDER=deepseek
+OFFER_DIAGNOSIS_PROVIDER=deepseek
 DEEPSEEK_API_KEY=在本地填写自己的密钥
 OFFER_DEEPSEEK_MODEL=deepseek-flash
 ```

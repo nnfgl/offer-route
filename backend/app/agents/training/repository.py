@@ -159,18 +159,20 @@ class TrainingRepository:
                 raise missing()
             return submission_output(row)
 
-    def evidence(self, diagnosis_id: str, user_id: str):
-        with self.database.connect() as connection:
-            self.diagnosis(diagnosis_id, user_id, connection)
-            rows = connection.execute(
-                "SELECT s.* FROM training_submissions s JOIN training_tasks t "
-                "ON s.training_task_id=t.id AND s.user_id=t.user_id "
-                "WHERE t.diagnosis_id=? AND t.user_id=? AND s.user_id=? AND s.status='passed' "
-                "ORDER BY s.created_at,s.id",
-                (diagnosis_id, user_id, user_id),
-            ).fetchall()
-            return [
-                evidence
-                for row in rows
-                for evidence in submission_output(row).evaluation_payload.evidence
-            ]
+    def evidence(self, diagnosis_id: str, user_id: str, connection=None):
+        if connection is None:
+            with self.database.connect() as connection:
+                return self.evidence(diagnosis_id, user_id, connection)
+        self.diagnosis(diagnosis_id, user_id, connection)
+        rows = connection.execute(
+            "SELECT s.* FROM training_submissions s JOIN training_tasks t "
+            "ON s.training_task_id=t.id AND s.user_id=t.user_id "
+            "WHERE t.diagnosis_id=? AND t.user_id=? AND s.user_id=? AND s.status='passed' "
+            "ORDER BY s.created_at,s.id",
+            (diagnosis_id, user_id, user_id),
+        ).fetchall()
+        return [
+            evidence
+            for row in rows
+            for evidence in submission_output(row).evaluation_payload.evidence
+        ]

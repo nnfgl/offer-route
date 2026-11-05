@@ -44,7 +44,7 @@ class TrainingService:
                 },
             ) from exc
 
-    def create(self, data: CreateTask, user_id: str) -> TaskOutput:
+    def create(self, data: CreateTask, user_id: str, *, task_id: str | None = None) -> TaskOutput:
         diagnosis = self.repository.diagnosis(str(data.diagnosis_id), user_id)
         if diagnosis["status"] != "completed":
             raise conflict("diagnosis_not_completed", "请先完成能力诊断")
@@ -82,7 +82,7 @@ class TrainingService:
             ) from exc
         now = int(time.time())
         task = TaskOutput(
-            id=str(uuid4()),
+            id=task_id or str(uuid4()),
             diagnosis_id=diagnosis["id"],
             title=TITLE,
             goal=gap.description,

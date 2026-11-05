@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import sqlite3
 import time
 from uuid import uuid4
 
@@ -17,6 +19,9 @@ from app.modules.auth.router import current_user, require_csrf
 from app.modules.auth.schemas import UserOutput
 
 router = APIRouter(prefix="/voice-interviews", tags=["voice-interview"])
+REVIEW_LEASE_SECONDS = 90
+MAX_REVIEW_RUNS = 3
+logger = logging.getLogger(__name__)
 
 
 def fail(status: int, code: str, message: str):
@@ -52,9 +57,11 @@ def config(request: Request, user: UserOutput = Depends(current_user)):
 
 
 @router.get("", response_model=list[VoiceInterview])
-def list_interviews(request: Request, user: UserOutput = Depends(current_user)):
+def list_interviews(
+    request: Request, diagnosis_id: str | None = None, user: UserOutput = Depends(current_user)
+):
     with request.app.state.database.connect() as connection:
-        return shared_store.history(connection, "voice", user.id)
+        return shared_store.history(connection, "voice", user.id, diagnosis_id)
 
 
 @router.get("/{interview_id}", response_model=VoiceInterview)
@@ -186,27 +193,83 @@ async def review_job(database, settings, interview_id: str, user_id: str, attemp
     with database.connect() as connection:
         connection.execute("BEGIN IMMEDIATE")
         interview = find(connection, interview_id, user_id)
-        if interview.report_attempt != attempt:
+        if (
+            interview.report_attempt != attempt
+            or not connection.execute(
+                "SELECT 1 FROM voice_review_jobs WHERE id=? AND state='running'", (attempt,)
+            ).fetchone()
+        ):
             return
         interview.report = report
-        interview.report_usage = usage
+        interview.report_usage = ModelUsage(
+            attempts=interview.report_usage.attempts + usage.attempts,
+            prompt_tokens=interview.report_usage.prompt_tokens + usage.prompt_tokens,
+            completion_tokens=interview.report_usage.completion_tokens + usage.completion_tokens,
+        )
         interview.report_error = error
         interview.report_status = "failed" if error else "completed"
         save(connection, interview, user_id)
+        connection.execute("DELETE FROM voice_review_jobs WHERE id=?", (attempt,))
 
 
-def enqueue(interview: VoiceInterview, request: Request, user_id: str, tasks: BackgroundTasks):
+async def run_voice_queue_once(database, settings) -> bool:
+    now = int(time.time())
+    with database.connect() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        running = connection.execute(
+            "SELECT * FROM voice_review_jobs WHERE state='running'"
+        ).fetchone()
+        if running:
+            if now - running["started_at"] < REVIEW_LEASE_SECONDS:
+                return False
+            interview = find(connection, running["interview_id"], running["user_id"])
+            if interview.report_attempt == running["id"]:
+                interview.report_status = "failed"
+                interview.report_error = "复盘任务被中断。已保存转写，请手动重试。"
+                save(connection, interview, running["user_id"])
+            connection.execute("DELETE FROM voice_review_jobs WHERE id=?", (running["id"],))
+        queued = connection.execute(
+            "SELECT * FROM voice_review_jobs WHERE state='queued' ORDER BY queued_at,rowid LIMIT 1"
+        ).fetchone()
+        if queued is None:
+            return False
+        connection.execute(
+            "UPDATE voice_review_jobs SET state='running',started_at=? WHERE id=?",
+            (now, queued["id"]),
+        )
+    await review_job(database, settings, queued["interview_id"], queued["user_id"], queued["id"])
+    return True
+
+
+async def voice_queue_worker(database, settings):
+    while True:
+        try:
+            if await run_voice_queue_once(database, settings):
+                continue
+        except sqlite3.Error as exc:
+            logger.error("Voice queue database error (%s)", type(exc).__name__)
+        await asyncio.sleep(1)
+
+
+def enqueue(
+    connection, interview: VoiceInterview, request: Request, user_id: str, tasks: BackgroundTasks
+):
+    runs = interview.report_runs or int(interview.report_attempt is not None)
+    if runs >= MAX_REVIEW_RUNS:
+        fail(429, "review_retry_limit", "本场语音复盘已达到三次运行上限")
+    interview.report_runs = runs + 1
     interview.report_status = "processing"
     interview.report_error = None
     interview.report_started_at = int(time.time())
     interview.report_attempt = str(uuid4())
+    connection.execute(
+        "INSERT INTO voice_review_jobs VALUES (?,?,?,'queued',?,NULL)",
+        (interview.report_attempt, interview.id, user_id, interview.report_started_at),
+    )
     tasks.add_task(
-        review_job,
+        run_voice_queue_once,
         request.app.state.database,
         request.app.state.settings,
-        interview.id,
-        user_id,
-        interview.report_attempt,
     )
 
 
@@ -241,7 +304,7 @@ def end_interview(
         interview.ended_at = int(time.time())
         interview.incomplete = data.accept_incomplete
         if any(message.role == "user" and message.final for message in interview.messages):
-            enqueue(interview, request, user.id, tasks)
+            enqueue(connection, interview, request, user.id, tasks)
         else:
             interview.report_status = "failed"
             interview.report_error = "没有完整的候选人回答，无法生成有依据的复盘。"
@@ -270,11 +333,18 @@ def retry_report(
             fail(409, "voice_not_ended", "结束面试后才可以生成复盘")
         if not any(message.role == "user" and message.final for message in interview.messages):
             fail(409, "no_complete_answer", "没有完整的候选人回答，无法生成复盘")
-        if interview.report_status == "completed" or (
-            interview.report_status == "processing"
-            and int(time.time()) - (interview.report_started_at or 0) < 90
+        if (
+            interview.report_status == "completed"
+            or connection.execute(
+                "SELECT 1 FROM voice_review_jobs WHERE interview_id=? AND user_id=?",
+                (interview_id, user.id),
+            ).fetchone()
+            or (
+                interview.report_status == "processing"
+                and int(time.time()) - (interview.report_started_at or 0) < REVIEW_LEASE_SECONDS
+            )
         ):
             return interview
-        enqueue(interview, request, user.id, tasks)
+        enqueue(connection, interview, request, user.id, tasks)
         save(connection, interview, user.id)
     return interview

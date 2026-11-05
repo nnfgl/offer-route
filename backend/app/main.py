@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.agents.diagnosis.service import DiagnosisWorkflow
 from app.agents.interview.router import router as interview_router
 from app.agents.interview.voice_router import router as voice_router
+from app.agents.interview.voice_router import voice_queue_worker
+from app.agents.orchestration.career import CareerWorkflow
+from app.agents.orchestration.career import router as career_router
 from app.agents.orchestration.service import JobWorkflow
 from app.agents.training.agent import TrainingAgent
 from app.agents.training.knowledge import BundledTrainingKnowledge
@@ -34,7 +38,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.job_workflow.recover_interrupted()
         app.state.diagnosis_workflow.recover_interrupted()
         app.state.training.recover_interrupted()
-        yield
+        app.state.career.recover_interrupted()
+        worker = None
+        if settings.environment != "test":
+            worker = asyncio.create_task(voice_queue_worker(database, settings))
+        try:
+            yield
+        finally:
+            if worker is not None:
+                worker.cancel()
+                with suppress(asyncio.CancelledError):
+                    await worker
 
     app = FastAPI(title="Offer Route API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
@@ -53,6 +67,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         BundledTrainingKnowledge(),
     )
     app.state.training_agent = TrainingAgent(app.state.training)
+    app.state.career = CareerWorkflow(
+        database, app.state.job_workflow, app.state.diagnosis_workflow, app.state.training
+    )
+    app.state.career_limiter = RateLimiter(20, 60)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -78,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(interview_router, prefix="/api/v1")
     app.include_router(voice_router, prefix="/api/v1")
     app.include_router(training_router, prefix="/api/v1")
+    app.include_router(career_router, prefix="/api/v1")
 
     @app.get("/api/v1/health", tags=["system"])
     def health():

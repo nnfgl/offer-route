@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.agents.contracts import AgentKind, AgentResult
-from app.agents.interview import voice_provider
+from app.agents.interview import voice_provider, voice_router
 from app.agents.interview.voice_schemas import VoiceInterview, VoiceMessage
 from app.core.config import Settings
 from app.core.model_client import ModelFailure
@@ -247,6 +247,25 @@ def test_interrupted_report_worker_can_be_retried_after_lease_timeout(client):
         )
     assert client.post(path + "/report").status_code == 202
     assert client.get(path).json()["report_status"] == "completed"
+
+
+def test_saved_voice_job_runs_after_request_dispatch_is_lost(client, monkeypatch):
+    path = live(client)
+    client.post(path + "/messages", json={"messages": MESSAGES})
+    drain = voice_router.run_voice_queue_once
+    monkeypatch.setattr(voice_router, "run_voice_queue_once", AsyncMock(return_value=False))
+    ended = client.post(path + "/end", json={"message_count": 2})
+    assert ended.json()["report_status"] == "processing"
+    voice_provider.generate_review.assert_not_awaited()
+
+    # A new process can read and claim the committed queue without the original HTTP request.
+    settings = client.app.state.settings
+    restarted = create_app(settings)
+    with TestClient(restarted):
+        assert asyncio.run(drain(restarted.state.database, settings))
+        assert not asyncio.run(drain(restarted.state.database, settings))
+    assert client.get(path).json()["report_status"] == "completed"
+    assert voice_provider.generate_review.await_count == 1
 
 
 @pytest.mark.parametrize(
