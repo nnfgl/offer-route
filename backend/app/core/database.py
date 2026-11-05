@@ -153,6 +153,56 @@ CREATE TABLE IF NOT EXISTS interview_turns (
 CREATE INDEX IF NOT EXISTS turns_owner ON interview_turns(user_id, created_at DESC);
 
     """,
+    """
+    CREATE TABLE career_routes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      job_source TEXT NOT NULL,
+      resume_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(resume_id, user_id) REFERENCES resumes(id, user_id) ON DELETE CASCADE
+    );
+    CREATE INDEX career_routes_owner ON career_routes(user_id, created_at DESC);
+    CREATE TABLE career_attempts (
+      id TEXT PRIMARY KEY,
+      route_id TEXT NOT NULL REFERENCES career_routes(id) ON DELETE CASCADE,
+      revision INTEGER NOT NULL,
+      stage TEXT NOT NULL CHECK(stage IN ('job', 'diagnosis', 'training')),
+      status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed', 'needs_input', 'skipped')),
+      message TEXT NOT NULL DEFAULT '',
+      UNIQUE(route_id, revision)
+    );
+    CREATE UNIQUE INDEX career_running ON career_attempts(route_id) WHERE status='running';
+    CREATE TABLE interview_practice (
+      session_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      skill TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      answer TEXT,
+      PRIMARY KEY(session_id, skill),
+      FOREIGN KEY(session_id, user_id) REFERENCES interview_sessions(id, user_id) ON DELETE CASCADE
+    );
+    INSERT OR IGNORE INTO interview_practice(session_id, user_id, skill, prompt)
+    SELECT s.id, s.user_id, p.value ->> '$.skill', p.value ->> '$.task'
+    FROM interview_sessions AS s, json_each(s.report_payload, '$.report.data.training_items') AS p
+    WHERE CASE WHEN p.type='object' THEN
+      json_type(p.value, '$.skill') = 'text' AND json_type(p.value, '$.task') = 'text'
+    ELSE 0 END;
+    """,
+    """
+    CREATE TABLE voice_review_jobs (
+      id TEXT PRIMARY KEY,
+      interview_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      state TEXT NOT NULL CHECK(state IN ('queued','running')),
+      queued_at INTEGER NOT NULL,
+      started_at INTEGER,
+      UNIQUE(interview_id, user_id)
+    );
+    CREATE UNIQUE INDEX voice_review_single_worker ON voice_review_jobs(state)
+      WHERE state='running';
+    """,
 ]
 
 
@@ -224,6 +274,10 @@ class Database:
                     "voice_interviews",
                     "interview_sessions",
                     "interview_turns",
+                    "career_routes",
+                    "career_attempts",
+                    "interview_practice",
+                    "voice_review_jobs",
                 }
                 if not expected <= tables:
                     raise RuntimeError("数据库迁移版本与表结构不一致，请由 A 协调升级")
@@ -235,7 +289,9 @@ class Database:
                 steps.append(MIGRATIONS[1])
             if "diagnosis_tasks" not in tables:
                 steps.append(MIGRATIONS[2])
-            steps.append(MIGRATIONS[3])
+            if version < 4:
+                steps.append(MIGRATIONS[3])
+            steps.extend(MIGRATIONS[max(version, 4) :])
             # sqlite3.executescript commits implicitly. Execute complete SQL statements
             # individually so layout detection and every DDL operation share one lock.
             statement = ""

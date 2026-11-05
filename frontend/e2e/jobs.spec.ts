@@ -17,7 +17,7 @@ test('岗位分析、原文定位、刷新后从历史恢复', async ({ page }, 
   await expect(page.getByRole('heading', { name: '优先与加分2' })).toBeVisible();
   await page.getByRole('button', { name: /查看原文/ }).first().click();
   await expect(page.locator('mark')).toContainText('Python');
-  await expect(page.getByText('后续功能尚未开放，本次未执行')).toBeVisible();
+  await expect(page.getByText('本步骤只分析岗位，后续任务可在求职路线中继续')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.reload();
   await page.getByRole('button', { name: '开始岗位分析 ↗' }).click();

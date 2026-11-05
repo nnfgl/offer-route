@@ -137,3 +137,16 @@ result、usage 和可空 error。result 复用 AgentResult，状态 completed / 
 
 全部接口要求登录；写接口要求 Origin 和会话 CSRF。其他用户的记录返回 404。
 完整可交互结构以本机 `/docs` 为准。
+
+## 求职路线
+
+| 方法 | 路径 | 请求及结果 |
+| --- | --- | --- |
+| POST | /career-routes | `request_id`、`job`（含 `title` 和 `source_text`）、`resume_title`、`resume_text`。相同编号和材料可安全重试 |
+| GET | /career-routes | 当前用户的历史路线摘要 |
+| GET | /career-routes/{id} | `revision`、`phase`、`next_stage`、尝试记录、关联 ID 和能力档案 |
+| POST | /career-routes/{id}/advance | 传入最新 `revision`，执行一个步骤。重复或过期版本返回 409，刷新后可继续 |
+| POST | /career-routes/{id}/practices/{session_id} | `skill`、`answer`，保存已有关联面试练习的回答 |
+
+路线中调用的 SQL 校验和面试使用原接口。面试列表支持 `diagnosis_id` 筛选当前用户的关联会话。
+模型用量为已知请求的累计计数，能力档案覆盖率按已通过练习的必需要求计数。

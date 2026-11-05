@@ -5,6 +5,7 @@ import { JobScreen } from '../agents/job/JobScreen';
 import { DiagnosisScreen } from '../agents/diagnosis/DiagnosisScreen';
 import { InterviewHub } from '../agents/interview/InterviewHub';
 import { TrainingScreen } from '../agents/training/TrainingScreen';
+import { CareerScreen } from '../agents/career/CareerScreen';
 
 const descriptions: Record<string, string> = {
   job: '拆解招聘要求，明确目标岗位需要的能力。',
@@ -39,6 +40,7 @@ export function WorkspaceScreen({ session, onLogout }: { session: Session; onLog
   if (screen === 'job') return <JobScreen session={session} onBack={() => setScreen('')} />;
   if (screen === 'diagnosis') return <DiagnosisScreen session={session} onBack={() => setScreen('')} />;
   if (screen === 'training') return <TrainingScreen session={session} onBack={() => setScreen('')} />;
+  if (screen === 'career') return <CareerScreen session={session} onBack={() => setScreen('')} onExpired={onLogout} />;
   const labels: Record<string, string> = { job: '开始岗位分析 ↗', diagnosis: '开始能力诊断 ↗', training: '开始实战训练 ↗' };
   return <div className="workspace">
     <header className="workspace-header"><a className="brand" href="/"><span className="brand-mark">↗</span> OFFER ROUTE</a><button className="quiet-button" onClick={logout} disabled={busy || voiceRunning}>{busy ? '正在退出…' : '退出登录'}</button></header>
@@ -47,6 +49,7 @@ export function WorkspaceScreen({ session, onLogout }: { session: Session; onLog
       <div className="account-banner"><span className="status-dot" /><div><strong>你的个人工作台</strong><p>{session.user.email}</p></div><span className="account-tag">账户已登录</span></div>
       <div className="section-heading"><h2>你的成长路线</h2><span>四个阶段，一个目标</span></div>
       <p className="planned-note">从岗位分析开始，对照简历找到缺口，再开展 SQL 实战训练和模拟面试。</p>
+      <button className="primary-button" disabled={voiceRunning} onClick={() => setScreen('career')}>开始求职路线</button>
       {error && <div className="error-message" role="alert">{error} <button className="quiet-button" onClick={() => setRetry(value => value + 1)}>重试加载</button></div>}
       {!workspace && !error && <p role="status">正在加载工作台…</p>}
       <div className="module-grid">{workspace?.modules.map((item, index) => <article className="module-card" key={item.id}>

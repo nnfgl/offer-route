@@ -13,6 +13,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.model_client import ModelUsage
+
 
 class EvidenceType(StrEnum):
     """证据强度分类，必须在提示词中强制 LLM 区分。"""
@@ -64,6 +66,7 @@ class DiagnosisResult(BaseModel):
     strengths: list[DiagnosisItem] = Field(default_factory=list, max_length=50)
     gaps: list[DiagnosisItem] = Field(default_factory=list, max_length=50)
     pending_verification: list[DiagnosisItem] = Field(default_factory=list, max_length=50)
+    usage: ModelUsage = Field(default_factory=ModelUsage)
 
     @field_validator("summary", mode="before")
     @classmethod

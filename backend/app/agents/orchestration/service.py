@@ -53,9 +53,9 @@ class JobWorkflow:
                     (task.status, task.model_dump_json(), task.id),
                 )
 
-    async def run(self, user_id: str, data: JobInput) -> JobTask:
+    async def run(self, user_id: str, data: JobInput, *, task_id: str | None = None) -> JobTask:
         task = JobTask(
-            id=str(uuid4()),
+            id=task_id or str(uuid4()),
             title=data.title,
             source_text=data.source_text,
             provider=self.settings.job_provider,
@@ -133,7 +133,7 @@ class JobWorkflow:
             TraceStep(
                 name="能力诊断 → 训练 → 面试",
                 status="skipped",
-                detail="后续功能尚未开放，本次未执行",
+                detail="本步骤只分析岗位，后续任务可在求职路线中继续",
             )
         )
         self.save(task)

@@ -6,15 +6,16 @@ import { VoiceConnection } from './voiceConnection';
 import type { VoiceConfig, VoiceConnect, VoiceInterview, VoiceMessage } from './voiceTypes';
 import './interview.css';
 import { InterviewContextFields } from './InterviewContextFields';
-import type { InterviewLinks } from './InterviewContextFields';
+import type { FixedInterviewContext, InterviewLinks } from './InterviewContextFields';
 
-export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
+export function VoiceInterviewScreen({ session, onExpired, onRunningChange, context }: {
   session: Session; onExpired: () => void; onRunningChange: (running: boolean) => void;
+  context?: FixedInterviewContext;
 }) {
   const [config, setConfig] = useState<VoiceConfig | null>(null);
   const [history, setHistory] = useState<VoiceInterview[]>([]);
   const [current, setCurrent] = useState<VoiceInterview | null>(null);
-  const [role, setRole] = useState('Python 后端工程师');
+  const [role, setRole] = useState(context?.title.slice(0, 100) ?? 'Python 后端工程师');
   const [experience, setExperience] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,8 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
   const [error, setError] = useState('');
   const [needsIncomplete, setNeedsIncomplete] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [links, setLinks] = useState<InterviewLinks>({ job_analysis_id: null, diagnosis_id: null });
+  const [links, setLinks] = useState<InterviewLinks>({ job_analysis_id: context?.job_analysis_id ?? null, diagnosis_id: context?.diagnosis_id ?? null });
+  const diagnosisId = context?.diagnosis_id;
   const connection = useRef<VoiceConnection | null>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const alive = useRef(true);
@@ -56,12 +58,12 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
   useEffect(() => {
     let active = true;
     setLoading(true); setError('');
-    Promise.all([api<VoiceConfig>('/voice-interviews/config'), api<VoiceInterview[]>('/voice-interviews')])
+    Promise.all([api<VoiceConfig>('/voice-interviews/config'), api<VoiceInterview[]>(diagnosisId ? `/voice-interviews?diagnosis_id=${diagnosisId}` : '/voice-interviews')])
       .then(([settings, records]) => { if (active) { setConfig(settings); setHistory(records); } })
       .catch(cause => { if (active) fail(cause); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [retry, onExpired]);
+  }, [retry, onExpired, diagnosisId]);
   useEffect(() => {
     if (!current || current.report_status !== 'processing') return;
     const id = current.id;
@@ -173,7 +175,7 @@ export function VoiceInterviewScreen({ session, onExpired, onRunningChange }: {
       {config && !config.configured && <div className="voice-notice" role="status">语音服务尚未配置。请在后端 .env 配置百炼语音 API Key 和业务空间地址，然后重启后端。</div>}
       {config && !config.review_configured && <p className="voice-notice">面试后复盘尚未配置。请在后端设置 DEEPSEEK_API_KEY；语音通话仍可单独进行。</p>}
       <form onSubmit={start}>
-        <InterviewContextFields links={links} onChange={setLinks} onExpired={onExpired} />
+        {!context && <InterviewContextFields links={links} onChange={setLinks} onExpired={onExpired} />}
         <label>目标岗位<input required maxLength={100} value={role} onChange={e => setRole(e.target.value)} /></label>
         <label>项目经历<textarea required minLength={10} maxLength={5000} rows={4} value={experience} onChange={e => setExperience(e.target.value)} /></label>
         <p className="planned-note">开始后请求麦克风权限，语音发送至{config?.provider ?? '语音服务'}，本应用保存文字转写用于复盘，不保存原始录音。建议戴耳机；单场最长 {config?.max_minutes ?? 15} 分钟。</p>

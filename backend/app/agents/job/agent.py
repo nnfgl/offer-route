@@ -57,7 +57,7 @@ def rule_extract(source: str) -> Extraction:
         if re.search(r"优先|加分|preferred|nice.to.have", quote, re.I):
             # Mixed clauses need human clarification instead of promoting all skills to optional.
             priority = "unspecified" if re.search(r"[，,].*(优先|加分)", quote) else "preferred"
-        elif re.search(r"必须|必备|须具备|must|required", quote, re.I):
+        elif re.search(r"^必需\s*[：:]|必须|必备|须具备|must|required", quote, re.I):
             priority = "required"
         category = "skill"
         if re.search(r"学历|学位|本科|硕士|博士|degree|bachelor|master", quote, re.I):

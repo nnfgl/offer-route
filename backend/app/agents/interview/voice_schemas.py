@@ -57,6 +57,7 @@ class VoiceInterview(BaseModel):
     report_status: Literal["not_started", "processing", "completed", "failed"] = "not_started"
     report_started_at: int | None = None
     report_attempt: str | None = None
+    report_runs: int = Field(default=0, ge=0)
     report_error: str | None = None
     report: AgentResult | None = None
     report_usage: ModelUsage = Field(default_factory=ModelUsage)

@@ -166,16 +166,17 @@ def find(connection, mode: str, record_id: str, user_id: str):
     error(404, "interview_not_found", "面试记录不存在")
 
 
-def history(connection, mode: str, user_id: str):
+def history(connection, mode: str, user_id: str, diagnosis_id: str | None = None):
     records = []
     if has_table(connection, "interview_sessions"):
-        rows = connection.execute(
-            "SELECT * FROM interview_sessions WHERE user_id = ? AND input_mode = ? "
-            "ORDER BY created_at DESC, id DESC LIMIT 50",
-            (user_id, mode),
-        ).fetchall()
+        query = "SELECT * FROM interview_sessions WHERE user_id = ? AND input_mode = ?"
+        values = (user_id, mode)
+        if diagnosis_id is not None:
+            query += " AND diagnosis_id = ?"
+            values += (diagnosis_id,)
+        rows = connection.execute(query + " ORDER BY created_at DESC, id DESC LIMIT 50", values)
         records.extend(_decode(connection, row, mode) for row in rows)
-    if has_table(connection, LEGACY[mode]):
+    if diagnosis_id is None and has_table(connection, LEGACY[mode]):
         rows = connection.execute(
             f"SELECT payload FROM {LEGACY[mode]} WHERE user_id = ? "
             "ORDER BY created_at DESC, id DESC LIMIT 50",
@@ -289,6 +290,15 @@ def save(connection, mode: str, record, user_id: str, *, create: bool = False):
             (record.id, user_id),
         )
     }
+    if record.report:
+        connection.executemany(
+            "INSERT INTO interview_practice(session_id,user_id,skill,prompt) VALUES (?,?,?,?) "
+            "ON CONFLICT(session_id,skill) DO NOTHING",
+            (
+                (record.id, user_id, item["skill"], item["task"])
+                for item in record.report.data.get("training_items", [])
+            ),
+        )
     for number, turn in enumerate(normalized, 1):
         payload = json.dumps(
             {

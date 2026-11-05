@@ -25,6 +25,8 @@ export default defineConfig({
         OFFER_JOB_PROVIDER: 'rules',
         OFFER_DIAGNOSIS_PROVIDER: 'rules',
         DEEPSEEK_API_KEY: '',
+        OFFER_VOICE_API_KEY: '',
+        OFFER_VOICE_WEBRTC_URL: '',
         // Multiple browser projects share one test server and authenticate repeatedly.
         OFFER_AUTH_RATE_LIMIT: '1000',
       },

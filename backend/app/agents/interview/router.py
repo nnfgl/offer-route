@@ -18,9 +18,11 @@ def find(connection, interview_id: str, user_id: str) -> dict:
 
 
 @router.get("", response_model=list[InterviewOutput])
-def list_interviews(request: Request, user: UserOutput = Depends(current_user)):
+def list_interviews(
+    request: Request, diagnosis_id: str | None = None, user: UserOutput = Depends(current_user)
+):
     with request.app.state.database.connect() as connection:
-        return shared_store.history(connection, "text", user.id)
+        return shared_store.history(connection, "text", user.id, diagnosis_id)
 
 
 @router.get("/contexts")

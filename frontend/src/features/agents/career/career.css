@@ -1,0 +1,5 @@
+.career-screen input { width: 100%; min-width: 0; padding: 12px; border: 1px solid #d4d4d8; border-radius: 8px; }
+.career-screen section { overflow-wrap: anywhere; }
+.career-screen li { margin: 10px 0; }
+.career-screen form + form { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e4e4e7; }
+.career-screen section > button { margin: 6px 8px 0 0; }
